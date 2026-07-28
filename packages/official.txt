@@ -1,0 +1,5 @@
+# Optional packages not currently provided by this Omarchy installation.
+yazi
+fcitx5
+fcitx5-configtool
+fcitx5-rime

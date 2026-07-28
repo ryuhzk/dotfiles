@@ -1,0 +1,30 @@
+# Gear 5 Luffy color scheme for terminal applications
+# Inspired by One Piece Gear Fifth - Nika Form
+
+accent = "#E55A6A"
+active_border_color = "#7AC77A"
+active_tab_background = "#FF9547"
+
+cursor = "#FF9547"
+foreground = "#F5EDE5"
+background = "#1E2836"
+selection_foreground = "#1E2836"
+selection_background = "#FFB56A"
+
+# Standard terminal colors (0-15)
+color0 = "#2D3A4D"
+color1 = "#E55A6A"
+color2 = "#7AC77A"
+color3 = "#FF9547"
+color4 = "#6ABED8"
+color5 = "#A52A4A"
+color6 = "#6ABED8"
+color7 = "#F5EDE5"
+color8 = "#485A70"
+color9 = "#E55A6A"
+color10 = "#7AC77A"
+color11 = "#FFB56A"
+color12 = "#6ABED8"
+color13 = "#C43A5C"
+color14 = "#6ABED8"
+color15 = "#F5EDE5"

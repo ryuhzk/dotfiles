@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Zoro
+Description=This is a plymouth theme which runs Zoro animation
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/zoro
+ScriptFile=/usr/share/plymouth/themes/zoro/zoro.script

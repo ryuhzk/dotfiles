@@ -1,0 +1,2 @@
+# Rime Ice schemas and dictionaries.
+rime-ice-git

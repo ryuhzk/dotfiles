@@ -1,0 +1,112 @@
+# ╔══════════════════════════════════════════════════════════════════════╗
+# ║  GEAR 5 BTOP - MANGA-INSPIRED SYSTEM MONITOR COLORS                  ║
+# ║  Inspired by One Piece Gear Fifth                                    ║
+# ╚══════════════════════════════════════════════════════════════════════╝
+
+# ═══════════════════════════════════════════════════════════════════════
+# 🌊 MAIN COLORS
+# ═══════════════════════════════════════════════════════════════════════
+# Main background (deep blue-gray sky)
+theme[main_bg]="#1E2836"
+
+# Main text color (warm cloud white)
+theme[main_fg]="#F5EDE5"
+
+# Title color for boxes
+theme[title]="#F5EDE5"
+
+# Highlight color for keyboard shortcuts (flame orange)
+theme[hi_fg]="#FF9547"
+
+# Background color of selected item
+theme[selected_bg]="#3A4A5F"
+
+# Foreground color of selected item
+theme[selected_fg]="#F5EDE5"
+
+# Color of inactive/disabled text
+theme[inactive_fg]="#8A7D72"
+
+# Color of text on top of graphs
+theme[graph_text]="#E8DDD5"
+
+# Background color of percentage meters
+theme[meter_bg]="#2D3A4D"
+
+# Process misc colors
+theme[proc_misc]="#FFB56A"
+
+# ═══════════════════════════════════════════════════════════════════════
+# 📦 BOX COLORS
+# ═══════════════════════════════════════════════════════════════════════
+# CPU box (flame orange)
+theme[cpu_box]="#FF9547"
+
+# Memory box (violet)
+theme[mem_box]="#7A5B8F"
+
+# Network box (sky blue)
+theme[net_box]="#6ABED8"
+
+# Process box (crimson)
+theme[proc_box]="#A52A4A"
+
+# Divider line
+theme[div_line]="#3A4A5F"
+
+# ═══════════════════════════════════════════════════════════════════════
+# 🌡️ TEMPERATURE GRADIENT
+# ═══════════════════════════════════════════════════════════════════════
+theme[temp_start]="#7AC77A"
+theme[temp_mid]="#E5A55A"
+theme[temp_end]="#E55A6A"
+
+# ═══════════════════════════════════════════════════════════════════════
+# 📊 CPU GRADIENT
+# ═══════════════════════════════════════════════════════════════════════
+theme[cpu_start]="#FFB56A"
+theme[cpu_mid]="#FF9547"
+theme[cpu_end]="#A52A4A"
+
+# ═══════════════════════════════════════════════════════════════════════
+# 💾 MEMORY METERS
+# ═══════════════════════════════════════════════════════════════════════
+# Free meter (emerald)
+theme[free_start]="#7AC77A"
+theme[free_mid]="#6ABED8"
+theme[free_end]="#7A5B8F"
+
+# Cached meter (violet gradient)
+theme[cached_start]="#9B7BAE"
+theme[cached_mid]="#7A5B8F"
+theme[cached_end]="#6B4B7C"
+
+# Available meter (orange-gold gradient)
+theme[available_start]="#FFCF87"
+theme[available_mid]="#FFB56A"
+theme[available_end]="#FF9547"
+
+# Used meter (earth-brown gradient)
+theme[used_start]="#C49A7A"
+theme[used_mid]="#9A7352"
+theme[used_end]="#7B5D3C"
+
+# ═══════════════════════════════════════════════════════════════════════
+# 🌐 NETWORK GRADIENT
+# ═══════════════════════════════════════════════════════════════════════
+# Download (sky-blue gradient)
+theme[download_start]="#6ABED8"
+theme[download_mid]="#7AA8D8"
+theme[download_end]="#9B7BAE"
+
+# Upload (orange-gold gradient)
+theme[upload_start]="#FFB56A"
+theme[upload_mid]="#E5A55A"
+theme[upload_end]="#C49A7A"
+
+# ═══════════════════════════════════════════════════════════════════════
+# ⚙️ PROCESS GRADIENT
+# ═══════════════════════════════════════════════════════════════════════
+theme[process_start]="#A52A4A"
+theme[process_mid]="#7A5B8F"
+theme[process_end]="#6ABED8"

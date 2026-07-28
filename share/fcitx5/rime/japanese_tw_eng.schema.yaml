@@ -1,0 +1,131 @@
+schema:
+  schema_id: japanese_tw_eng
+  name: Multilingual ZH-JA-EN
+  version: "2.0.0"
+  author:
+    - ryu
+  description: Mixed Pinyin, Romaji, and English input.
+  dependencies:
+    - rime_ice
+    - melt_eng
+    - sno_japanese
+
+switches:
+  - name: ascii_mode
+    reset: 0
+    states: [Multilingual, Latin]
+  - name: ascii_punct
+    states: [CJK, ASCII]
+  - name: traditionalization
+    states: [Simplified, Traditional]
+  - name: emoji
+    reset: 1
+    states: [Emoji-Off, Emoji-On]
+  - name: hiragana_katakana
+    reset: 0
+    states: [Hiragana, Katakana]
+
+engine:
+  processors:
+    - ascii_composer
+    - recognizer
+    - key_binder
+    - speller
+    - punctuator
+    - selector
+    - navigator
+    - express_editor
+  segmentors:
+    - ascii_segmentor
+    - matcher
+    - abc_segmentor
+    - punct_segmentor
+    - fallback_segmentor
+  translators:
+    - punct_translator
+    - script_translator@chinese
+    - table_translator@japanese
+    - table_translator@english
+    - table_translator@cn_en
+  filters:
+    - simplifier@emoji
+    - simplifier@traditionalize
+    - simplifier@hiragana_katakana
+    - uniquifier
+
+speller:
+  alphabet: "zyxwvutsrqponmlkjihgfedcba-_"
+  delimiter: " '"
+  algebra:
+    - derive/_/x/
+    - derive/-/q/
+    - derive/i_e/ye/
+    - derive/tu/tsu/
+    - derive/si/shi/
+
+chinese:
+  dictionary: rime_ice
+  prism: rime_ice
+  enable_word_completion: true
+  initial_quality: 1.2
+  preedit_format:
+    - xform/([jqxy])v/$1u/
+    - xform/([nl])ue/$1ve/
+
+japanese:
+  dictionary: japanese
+  prism: japanese
+  enable_completion: false
+  initial_quality: 1.1
+  comment_format:
+    - "xlit|q|ー|"
+  preedit_format:
+    - "xlit|q|ー|"
+
+english:
+  dictionary: melt_eng
+  prism: melt_eng
+  enable_sentence: false
+  enable_user_dict: false
+  initial_quality: 1.0
+  comment_format:
+    - xform/.*//
+
+cn_en:
+  dictionary: ""
+  user_dict: en_dicts/cn_en
+  db_class: stabledb
+  enable_completion: true
+  enable_sentence: false
+  initial_quality: 0.5
+  comment_format:
+    - xform/^.+$//
+
+emoji:
+  option_name: emoji
+  opencc_config: emoji.json
+  inherit_comment: false
+
+traditionalize:
+  option_name: traditionalization
+  opencc_config: s2twp.json
+  tips: none
+
+hiragana_katakana:
+  option_name: hiragana_katakana
+  opencc_config: hiragana_katakana.json
+  tips: none
+
+punctuator:
+  import_preset: default
+
+key_binder:
+  import_preset: default
+  bindings:
+    - { accept: "Control+Shift+1", toggle: ascii_mode, when: always }
+    - { accept: "Control+Shift+3", toggle: ascii_punct, when: always }
+    - { accept: "Control+Shift+4", toggle: traditionalization, when: always }
+    - { accept: "Control+Shift+5", toggle: hiragana_katakana, when: always }
+
+recognizer:
+  import_preset: default

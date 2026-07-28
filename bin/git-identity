@@ -1,0 +1,311 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
+STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
+IDENTITY_FILE="$CONFIG_HOME/git/identity"
+GLOBAL_CONFIG_FILE="$CONFIG_HOME/git/config"
+NAME=""
+EMAIL=""
+SIGNING_KEY=""
+SIGN_MODE="ask"
+
+info() { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
+ok() { printf '\033[1;32m==>\033[0m %s\n' "$*"; }
+die() { printf '\033[1;31merror:\033[0m %s\n' "$*" >&2; exit 1; }
+
+usage() {
+  cat <<'EOF'
+Usage: bin/git-identity [options]
+
+Configure private Git identity data outside this repository.
+
+Options:
+  --name <name>           Git author name
+  --email <email>         Git author email or a GitHub no-reply address
+  --sign                  Enable signing; create a matching key if needed
+  --no-sign               Disable commit signing
+  --signing-key <key>     OpenPGP fingerprint; implies --sign
+  -h, --help              Show this help
+
+With no options, the script prompts interactively. For automation, provide
+--name, --email, and a signing option. Creating a new protected OpenPGP key
+requires an interactive terminal for GnuPG's passphrase prompt.
+EOF
+}
+
+prompt_value() {
+  local label="$1"
+  local default_value="$2"
+  local input
+
+  if [[ -n "$default_value" ]]; then
+    read -r -p "$label [$default_value]: " input
+    REPLY="${input:-$default_value}"
+  else
+    read -r -p "$label: " input
+    REPLY="$input"
+  fi
+}
+
+prompt_yes_no() {
+  local label="$1"
+  local default_answer="$2"
+  local hint="[y/N]"
+  local input
+
+  [[ "$default_answer" == "yes" ]] && hint="[Y/n]"
+  read -r -p "$label $hint: " input
+  input="${input:-$default_answer}"
+  [[ "$input" =~ ^([yY]|[yY][eE][sS])$ ]]
+}
+
+is_valid_signing_key() {
+  local key="$1"
+
+  [[ "$key" =~ ^[0-9A-Fa-f]{16,40}$ ]] &&
+    gpg --batch --list-secret-keys "$key" >/dev/null 2>&1
+}
+
+validate_signing_key() {
+  local key="$1"
+
+  [[ "$key" =~ ^[0-9A-Fa-f]{16,40}$ ]] ||
+    die "Signing key must be a 16- to 40-character hexadecimal fingerprint"
+  is_valid_signing_key "$key" ||
+    die "No local secret key matches fingerprint: $key"
+}
+
+list_matching_signing_keys() {
+  local email="$1"
+
+  gpg --batch --with-colons --list-secret-keys "$email" 2>/dev/null |
+    awk -F: '
+      $1 == "sec" { need_fingerprint = 1; next }
+      need_fingerprint && $1 == "fpr" {
+        print $10
+        need_fingerprint = 0
+      }
+    '
+}
+
+generate_signing_key() {
+  local before
+  local after
+  local fingerprint
+  local generated_key=""
+  local user_id="$NAME <$EMAIL>"
+
+  [[ -t 0 && -t 1 ]] ||
+    die "Creating a protected OpenPGP key requires an interactive terminal"
+
+  before="$(list_matching_signing_keys "$EMAIL" || true)"
+  if [[ -z "${GPG_TTY:-}" ]]; then
+    GPG_TTY="$(tty)"
+    export GPG_TTY
+  fi
+
+  info "No OpenPGP secret key matches $EMAIL"
+  info "Creating an Ed25519 signing key that expires in two years"
+  info "GnuPG will ask you to protect the key with a passphrase"
+  gpg --yes --quick-generate-key "$user_id" ed25519 default 2y ||
+    die "OpenPGP key generation failed"
+
+  after="$(list_matching_signing_keys "$EMAIL" || true)"
+  while IFS= read -r fingerprint; do
+    [[ -n "$fingerprint" ]] || continue
+    if ! grep -Fxq -- "$fingerprint" <<<"$before"; then
+      generated_key="$fingerprint"
+      break
+    fi
+  done <<<"$after"
+
+  [[ -n "$generated_key" ]] ||
+    die "The new OpenPGP key fingerprint could not be determined"
+  SIGNING_KEY="$generated_key"
+  ok "Created OpenPGP signing key: $SIGNING_KEY"
+}
+
+resolve_signing_key() {
+  local current_key="$1"
+  local matching_keys
+  local key_count
+
+  command -v gpg >/dev/null 2>&1 ||
+    die "gpg is required for OpenPGP signing"
+
+  matching_keys="$(list_matching_signing_keys "$EMAIL" || true)"
+  if [[ -n "$current_key" ]] &&
+    grep -Fxq -- "${current_key^^}" <<<"${matching_keys^^}" &&
+    is_valid_signing_key "$current_key"; then
+    SIGNING_KEY="${current_key^^}"
+    info "Using the configured OpenPGP key: $SIGNING_KEY"
+    return
+  fi
+
+  key_count="$(grep -c . <<<"$matching_keys" || true)"
+  case "$key_count" in
+    0)
+      generate_signing_key
+      ;;
+    1)
+      SIGNING_KEY="${matching_keys^^}"
+      info "Using the OpenPGP key matching $EMAIL: $SIGNING_KEY"
+      ;;
+    *)
+      [[ -t 0 ]] ||
+        die "Multiple OpenPGP keys match $EMAIL; use --signing-key"
+      printf 'Matching OpenPGP signing keys:\n%s\n' "$matching_keys"
+      prompt_value "OpenPGP signing fingerprint" "$current_key"
+      SIGNING_KEY="$REPLY"
+      validate_signing_key "$SIGNING_KEY"
+      ;;
+  esac
+}
+
+write_identity() {
+  local signing_enabled="$1"
+  local identity_dir
+  local temporary_file
+  local backup_dir
+  local timestamp
+
+  identity_dir="$(dirname "$IDENTITY_FILE")"
+  mkdir -p "$identity_dir"
+  timestamp="$(date +%Y%m%d-%H%M%S)-$$"
+  backup_dir="$STATE_HOME/dotfiles/backups/$timestamp"
+  mkdir -p "$backup_dir"
+
+  if [[ -e "$IDENTITY_FILE" ]]; then
+    cp -a "$IDENTITY_FILE" "$backup_dir/git-identity"
+  fi
+  if [[ -e "$GLOBAL_CONFIG_FILE" ]]; then
+    cp -a "$GLOBAL_CONFIG_FILE" "$backup_dir/git-config"
+  fi
+
+  temporary_file="$(mktemp "$identity_dir/.identity.XXXXXX")"
+  trap 'rm -f -- "$temporary_file"' EXIT
+
+  git config --file "$temporary_file" user.name "$NAME"
+  git config --file "$temporary_file" user.email "$EMAIL"
+  git config --file "$temporary_file" commit.gpgSign "$signing_enabled"
+
+  if [[ "$signing_enabled" == "true" ]]; then
+    git config --file "$temporary_file" user.signingKey "$SIGNING_KEY"
+    git config --file "$temporary_file" gpg.format openpgp
+  fi
+
+  chmod 600 "$temporary_file"
+  mv "$temporary_file" "$IDENTITY_FILE"
+  trap - EXIT
+
+  if ! git config --file "$GLOBAL_CONFIG_FILE" --get-all include.path 2>/dev/null |
+    grep -Fxq -- "$IDENTITY_FILE"; then
+    git config --file "$GLOBAL_CONFIG_FILE" --add include.path "$IDENTITY_FILE"
+  fi
+
+  git config --file "$GLOBAL_CONFIG_FILE" --unset-all user.name 2>/dev/null || true
+  git config --file "$GLOBAL_CONFIG_FILE" --unset-all user.email 2>/dev/null || true
+  git config --file "$GLOBAL_CONFIG_FILE" --unset-all user.signingKey 2>/dev/null || true
+  git config --file "$GLOBAL_CONFIG_FILE" --unset-all commit.gpgSign 2>/dev/null || true
+
+  info "Backed up the previous Git configuration to $backup_dir"
+}
+
+main() {
+  local current_name
+  local current_email
+  local current_key
+  local signing_enabled="false"
+
+  while (($#)); do
+    case "$1" in
+      --name)
+        (($# >= 2)) || die "--name requires a value"
+        NAME="$2"
+        shift 2
+        ;;
+      --email)
+        (($# >= 2)) || die "--email requires a value"
+        EMAIL="$2"
+        shift 2
+        ;;
+      --sign)
+        SIGN_MODE="yes"
+        shift
+        ;;
+      --no-sign)
+        SIGN_MODE="no"
+        shift
+        ;;
+      --signing-key)
+        (($# >= 2)) || die "--signing-key requires a value"
+        SIGNING_KEY="$2"
+        SIGN_MODE="yes"
+        shift 2
+        ;;
+      -h|--help)
+        usage
+        return
+        ;;
+      *)
+        die "Unknown option: $1"
+        ;;
+    esac
+  done
+
+  command -v git >/dev/null 2>&1 || die "git is required"
+  current_name="$(git config --global --includes user.name 2>/dev/null || true)"
+  current_email="$(git config --global --includes user.email 2>/dev/null || true)"
+  current_key="$(git config --global --includes user.signingKey 2>/dev/null || true)"
+
+  if [[ -t 0 ]]; then
+    if [[ -z "$NAME" ]]; then
+      prompt_value "Git author name" "$current_name"
+      NAME="$REPLY"
+    fi
+    if [[ -z "$EMAIL" ]]; then
+      prompt_value "Private email or GitHub no-reply email" "$current_email"
+      EMAIL="$REPLY"
+    fi
+    if [[ "$SIGN_MODE" == "ask" ]]; then
+      if prompt_yes_no "Enable OpenPGP commit signing" \
+        "$([[ -n "$current_key" ]] && printf yes || printf no)"; then
+        SIGN_MODE="yes"
+      else
+        SIGN_MODE="no"
+      fi
+    fi
+  else
+    [[ -n "$NAME" && -n "$EMAIL" && "$SIGN_MODE" != "ask" ]] ||
+      die "Non-interactive use requires --name, --email, and a signing option"
+  fi
+
+  [[ -n "${NAME//[[:space:]]/}" ]] || die "Git author name cannot be empty"
+  [[ "$NAME" != *[$'\r\n<>']* ]] ||
+    die "Git author name cannot contain angle brackets or newlines"
+  [[ "$EMAIL" =~ ^[^[:space:]@\<\>]+@[^[:space:]@\<\>]+\.[^[:space:]@\<\>]+$ ]] ||
+    die "Git author email is invalid"
+
+  if [[ "$SIGN_MODE" == "yes" ]]; then
+    command -v gpg >/dev/null 2>&1 ||
+      die "gpg is required for OpenPGP signing"
+    if [[ -n "$SIGNING_KEY" ]]; then
+      validate_signing_key "$SIGNING_KEY"
+      SIGNING_KEY="${SIGNING_KEY^^}"
+    else
+      resolve_signing_key "$current_key"
+    fi
+    signing_enabled="true"
+  fi
+
+  umask 077
+  write_identity "$signing_enabled"
+  ok "Private Git identity saved to $IDENTITY_FILE"
+  ok "Git includes the private identity without storing it in this repository"
+  if [[ "$signing_enabled" == "true" ]]; then
+    info "Back up the OpenPGP secret key separately; never commit it to dotfiles"
+  fi
+}
+
+main "$@"

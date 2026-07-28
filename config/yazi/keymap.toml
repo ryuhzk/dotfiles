@@ -1,0 +1,6 @@
+[mgr]
+prepend_keymap = [
+  { on = ".", run = "hidden toggle", desc = "Toggle hidden files" },
+  { on = [ "g", "r" ], run = "cd ~/.repos", desc = "Go to repositories" },
+]
+
