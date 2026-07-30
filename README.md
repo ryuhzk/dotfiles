@@ -12,6 +12,10 @@ personal additions:
 - The custom `onepiece` Omarchy theme
 - The animated `zoro` Plymouth theme
 
+<p align="center">
+  <img src="assets/zoro-plymouth.gif" alt="Zoro Plymouth boot animation preview">
+</p>
+
 It intentionally does not replace Omarchy's Neovim, tmux, terminal, Git,
 Hyprland, shell, bar, lock-screen, or generated theme state.
 
@@ -78,21 +82,20 @@ The installer does not switch themes automatically.
 
 The Fcitx5 module keeps three Rime choices:
 
-- `Multilingual ZH-JA-EN` (`japanese_tw_eng`) for mixed Pinyin, Romaji, and
-  English input
+- `Mixed ZH-JA-EN` (`japanese_tw_eng`) for the previous mixed Pinyin, Romaji,
+  and English workflow
 - `Rime Ice` (`rime_ice`) for the full upstream Chinese experience
-- `Japanese` (`sno_japanese`) for focused Romaji input with a
-  Hiragana/Katakana toggle
+- `Japanese` (`sno_japanese`) for the previous focused Romaji workflow
 
-Rime Ice is provided by the `rime-ice-git` package. Japanese dictionaries are
-downloaded at install time from a pinned revision of
-`gkovacs/rime-japanese`; the large third-party dictionaries are not
-redistributed by this repository.
+The mixed schema retains its `P` Japanese Kanji Pinyin lookup, `T` Rime Ice
+lookup, `J`-prefixed English-to-Japanese lookup, translation hints, and
+Hiragana/Katakana conversion. Left Shift switches between native and Latin
+input, matching the previous configuration.
 
-Those three dictionaries replace the large upstream-derived copies from the
-previous dotfiles repository. Keeping them external preserves the same input
-data while making its source explicit and avoiding roughly 38 MB of vendored
-dictionary files.
+Rime Ice is provided by `rime-ice-git`. The Japanese and translation
+dictionaries are installed from pinned revisions of `gkovacs/rime-japanese`
+and `snomiao/rime-snomiao`. The repository keeps only custom schemas and small
+conversion rules, avoiding roughly 65 MB of vendored third-party data.
 
 After copying the configuration, the installer deploys the Rime schemas and
 dictionaries. On current Omarchy systems it then restarts
@@ -133,6 +136,21 @@ passphrase. The script contains no real name, email address, or key fingerprint.
 
 Back up the secret key separately after creating it. Never store a private-key
 export in this repository.
+
+Print the configured public key in ASCII-armored form:
+
+```bash
+bin/git-identity --export-public-key
+```
+
+Copy it directly for GitHub:
+
+```bash
+bin/git-identity --export-public-key | wl-copy
+```
+
+This action exports only the public key associated with Git's configured
+fingerprint. The script deliberately provides no secret-key export action.
 
 ## Individual modules
 

@@ -1,29 +1,29 @@
 schema:
   schema_id: japanese_tw_eng
-  name: Multilingual ZH-JA-EN
-  version: "2.0.0"
+  name: Mixed ZH-JA-EN
+  version: "2.1.0"
   author:
-    - ryu
-  description: Mixed Pinyin, Romaji, and English input.
+    - ensigma96
+    - snomiao
+  description: Mixed Pinyin, Romaji, and English input with reverse lookup.
   dependencies:
+    - japanese_pinyin
     - rime_ice
     - melt_eng
-    - sno_japanese
+    - translate_en2jp
 
 switches:
   - name: ascii_mode
     reset: 0
-    states: [Multilingual, Latin]
+    states: [中文, 西文]
   - name: ascii_punct
-    states: [CJK, ASCII]
-  - name: traditionalization
-    states: [Simplified, Traditional]
-  - name: emoji
-    reset: 1
-    states: [Emoji-Off, Emoji-On]
+    states: [。，, ．，]
+  - name: simplification
+    reset: 0
+    states: [漢字, 汉字]
   - name: hiragana_katakana
     reset: 0
-    states: [Hiragana, Katakana]
+    states: [平假名, 片假名]
 
 engine:
   processors:
@@ -39,19 +39,39 @@ engine:
     - ascii_segmentor
     - matcher
     - abc_segmentor
+    - affix_segmentor@translate_en2jp_lookup
+    - affix_segmentor@japanese_lookup
+    - affix_segmentor@pinyin_simp_lookup
+    - affix_segmentor@japanese_pinyin_lookup
     - punct_segmentor
     - fallback_segmentor
   translators:
     - punct_translator
-    - script_translator@chinese
-    - table_translator@japanese
-    - table_translator@english
+    - script_translator
+    - table_translator@japanese_lookup
+    - script_translator@pinyin_simp_lookup
+    - script_translator@japanese_pinyin_lookup
+    - table_translator@melt_eng
     - table_translator@cn_en
+    - table_translator@translate_en2jp_lookup
   filters:
+    - simplifier
+    - simplifier@s2tw_converter
     - simplifier@emoji
-    - simplifier@traditionalize
-    - simplifier@hiragana_katakana
+    - simplifier@zhjp_translate_suggestion
+    - simplifier@jpzh_translate_suggestion
+    - simplifier@hiragana_katakana_converter
     - uniquifier
+    - reverse_lookup_filter@japanese_reverse_lookup
+    - reverse_lookup_filter@translate_en2jp_reverse_lookup
+    - reverse_lookup_filter@pinyin_simp_reverse_lookup
+
+abc_segmentor:
+  extra_tags:
+    - translate_en2jp_lookup
+    - japanese_lookup
+    - pinyin_simp_lookup
+    - japanese_pinyin_lookup
 
 speller:
   alphabet: "zyxwvutsrqponmlkjihgfedcba-_"
@@ -63,7 +83,7 @@ speller:
     - derive/tu/tsu/
     - derive/si/shi/
 
-chinese:
+translator:
   dictionary: rime_ice
   prism: rime_ice
   enable_word_completion: true
@@ -72,22 +92,58 @@ chinese:
     - xform/([jqxy])v/$1u/
     - xform/([nl])ue/$1ve/
 
-japanese:
+japanese_lookup:
   dictionary: japanese
-  prism: japanese
   enable_completion: false
-  initial_quality: 1.1
+  spelling_hints: 5
   comment_format:
     - "xlit|q|ー|"
   preedit_format:
     - "xlit|q|ー|"
 
-english:
+japanese_pinyin_lookup:
+  tag: japanese_pinyin_lookup
+  prefix: P
+  enable_completion: false
+  dictionary: japanese_pinyin
+  prism: japanese_pinyin
+  tips: 〔拼音和字〕
+  preedit_format:
+    - xform/([nl])v/$1ü/
+    - xform/([nl])ue/$1üe/
+    - xform/([jqxy])v/$1u/
+
+translate_en2jp_lookup:
+  tag: translate_en2jp_lookup
+  dictionary: translate_en2jp
+  enable_completion: false
+  prism: translate_en2jp
+  prefix: J
+  suffix: "`"
+  tips: 〔English to Japanese〕
+
+pinyin_simp_lookup:
+  tag: pinyin_simp_lookup
+  prefix: T
+  suffix: "`"
+  enable_completion: true
+  dictionary: rime_ice
+  prism: rime_ice
+  tips: 〔Rime Ice Pinyin〕
+  preedit_format:
+    - xform/([nl])v/$1ü/
+    - xform/([nl])ue/$1üe/
+    - xform/([jqxy])v/$1u/
+  comment_format:
+    - xform/([nl])v/$1ü/
+    - xform/([nl])ue/$1üe/
+    - xform/([jqxy])v/$1u/
+
+melt_eng:
   dictionary: melt_eng
-  prism: melt_eng
   enable_sentence: false
   enable_user_dict: false
-  initial_quality: 1.0
+  initial_quality: 1.1
   comment_format:
     - xform/.*//
 
@@ -101,20 +157,82 @@ cn_en:
   comment_format:
     - xform/^.+$//
 
+recognizer:
+  import_preset: default
+  patterns:
+    japanese_pinyin_lookup: "^P[a-z;/,.]*`?$"
+    pinyin_simp_lookup: "^T[a-z;/,.]*`?$"
+    punct: "^/([0-9]+[a-z]*|[a-z]+)$"
+    translate_en2jp_lookup: "^J[a-z;/,.]*`?$"
+    expression: "^=.*$"
+
+s2tw_converter:
+  opencc_config: s2twp.json
+  tags: [pinyin_simp_lookup]
+  tips: none
+
 emoji:
   option_name: emoji
   opencc_config: emoji.json
   inherit_comment: false
 
-traditionalize:
-  option_name: traditionalization
-  opencc_config: s2twp.json
+zhjp_translate_suggestion:
+  option_name: zhjp_translate_suggestion
+  opencc_config: zhjp.json
+  tags:
+    - pinyin_simp_lookup
+    - japanese_pinyin_lookup
   tips: none
 
-hiragana_katakana:
+jpzh_translate_suggestion:
+  option_name: jpzh_translate_suggestion
+  opencc_config: jpzh.json
+  tags: [japanese_lookup]
+  show_in_comment: true
+  tips: none
+
+hiragana_katakana_converter:
   option_name: hiragana_katakana
   opencc_config: hiragana_katakana.json
+  tags: [japanese_lookup]
   tips: none
+
+japanese_reverse_lookup:
+  tags:
+    - translate_en2jp_lookup
+    - pinyin_simp_lookup
+    - japanese_pinyin_lookup
+  spelling_hints: 2
+  dictionary: japanese
+
+translate_en2jp_reverse_lookup:
+  tags: [translate_en2jp_lookup]
+  spelling_hints: 3
+  dictionary: translate_en2jp
+  comment_format:
+    - "xform/^/ /"
+    - "xform/(.{80}.+)/$1--/"
+    - "xform/([a-z])-[a-z]+/$1/"
+    - "xform/ (\\S\\S\\S\\S)\\S\\S+(?=.*?--$)/ $1-/"
+    - "xform/^(.*)--$/$1/"
+    - "xform/ ([a-z]+)((?:-[a-z]+)*) \\1([a-z]+)/ $1$2-$3/"
+    - "xform/ ([a-z]+)((?:-[a-z]+)*) \\1([a-z]+)/ $1$2-$3/"
+    - "xform/ ([a-z]+)((?:-[a-z]+)*) \\1([a-z]+)/ $1$2-$3/"
+    - "xform/ ([a-z]+)((?:-[a-z]+)*) \\1([a-z]+)/ $1$2-$3/"
+    - "xform/ ([a-z]+)((?:-[a-z]+)*) \\1([a-z]+)/ $1$2-$3/"
+    - "xform/ (\\S+)( \\1)+/ $1/"
+    - "xform/ (.{40}).+/$1…/"
+    - "xform/^\\s*//"
+    - "xform/\\s*$//"
+
+pinyin_simp_reverse_lookup:
+  tags: [pinyin_simp_lookup]
+  spelling_hints: 3
+  dictionary: rime_ice
+  comment_format:
+    - xform/([nl])v/$1ü/
+    - xform/([nl])ue/$1üe/
+    - xform/([jqxy])v/$1u/
 
 punctuator:
   import_preset: default
@@ -124,8 +242,12 @@ key_binder:
   bindings:
     - { accept: "Control+Shift+1", toggle: ascii_mode, when: always }
     - { accept: "Control+Shift+3", toggle: ascii_punct, when: always }
-    - { accept: "Control+Shift+4", toggle: traditionalization, when: always }
+    - { accept: "Control+Shift+4", toggle: simplification, when: always }
     - { accept: "Control+Shift+5", toggle: hiragana_katakana, when: always }
 
-recognizer:
-  import_preset: default
+editor:
+  bindings:
+    Shift_R: commit_comment
+
+menu:
+  page_size: 10

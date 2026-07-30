@@ -1,23 +1,26 @@
 schema:
   schema_id: sno_japanese
   name: Japanese
-  version: "2.0.0"
+  version: "2.1.0"
   author:
     - ensigma96
     - snomiao
-  description: A focused Japanese Romaji input scheme.
+  description: Focused Japanese Romaji input.
 
 switches:
   - name: ascii_mode
     reset: 0
-    states: [Japanese, Latin]
+    states: [日文, 西文]
   - name: full_shape
-    states: [Half, Full]
+    states: [半角, 全角]
+  - name: simplification
+    reset: 0
+    states: [漢字, 汉字]
   - name: ascii_punct
-    states: [JP, ASCII]
+    states: [。，, ．，]
   - name: hiragana_katakana
     reset: 0
-    states: [Hiragana, Katakana]
+    states: [平假名, 片假名]
 
 engine:
   processors:
@@ -33,14 +36,18 @@ engine:
     - ascii_segmentor
     - matcher
     - abc_segmentor
+    - affix_segmentor@japanese_lookup
     - punct_segmentor
     - fallback_segmentor
   translators:
     - punct_translator
-    - table_translator
+    - table_translator@japanese_lookup
+    - script_translator
   filters:
-    - simplifier@hiragana_katakana
+    - simplifier
+    - simplifier@hiragana_katakana_converter
     - uniquifier
+    - reverse_lookup_filter@japanese_reverse_lookup
 
 speller:
   alphabet: "zyxwvutsrqponmlkjihgfedcba-_"
@@ -52,6 +59,9 @@ speller:
     - derive/tu/tsu/
     - derive/si/shi/
 
+abc_segmentor:
+  extra_tags: [japanese_lookup]
+
 translator:
   dictionary: japanese
   enable_completion: false
@@ -61,10 +71,30 @@ translator:
   preedit_format:
     - "xlit|q|ー|"
 
-hiragana_katakana:
+japanese_lookup:
+  dictionary: japanese
+  enable_completion: false
+  spelling_hints: 5
+  comment_format:
+    - "xlit|q|ー|"
+  preedit_format:
+    - "xlit|q|ー|"
+
+hiragana_katakana_converter:
   option_name: hiragana_katakana
   opencc_config: hiragana_katakana.json
   tips: none
+
+japanese_reverse_lookup:
+  spelling_hints: 2
+  dictionary: japanese
+  comment_format:
+    - "xlit|q|ー|"
+
+recognizer:
+  import_preset: default
+  patterns:
+    punct: "^/([0-9]+[a-z]*|[a-z]+)$"
 
 punctuator:
   import_preset: default
@@ -75,7 +105,12 @@ key_binder:
     - { accept: "Control+Shift+1", toggle: ascii_mode, when: always }
     - { accept: "Control+Shift+2", toggle: full_shape, when: always }
     - { accept: "Control+Shift+3", toggle: ascii_punct, when: always }
+    - { accept: "Control+Shift+4", toggle: simplification, when: always }
     - { accept: "Control+Shift+5", toggle: hiragana_katakana, when: always }
 
-recognizer:
-  import_preset: default
+editor:
+  bindings:
+    Shift_R: commit_comment
+
+menu:
+  page_size: 10

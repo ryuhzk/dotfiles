@@ -26,11 +26,15 @@ Options:
   --sign                  Enable signing; create a matching key if needed
   --no-sign               Disable commit signing
   --signing-key <key>     OpenPGP fingerprint; implies --sign
+  --export-public-key     Print the configured public key in ASCII armor
   -h, --help              Show this help
 
 With no options, the script prompts interactively. For automation, provide
 --name, --email, and a signing option. Creating a new protected OpenPGP key
 requires an interactive terminal for GnuPG's passphrase prompt.
+
+--export-public-key is a standalone action. Pipe it to a clipboard command or
+redirect it to a file outside this repository.
 EOF
 }
 
@@ -74,6 +78,21 @@ validate_signing_key() {
     die "Signing key must be a 16- to 40-character hexadecimal fingerprint"
   is_valid_signing_key "$key" ||
     die "No local secret key matches fingerprint: $key"
+}
+
+export_configured_public_key() {
+  local signing_key
+
+  command -v git >/dev/null 2>&1 || die "git is required"
+  command -v gpg >/dev/null 2>&1 || die "gpg is required"
+
+  signing_key="$(git config --global --includes --get user.signingKey 2>/dev/null || true)"
+  [[ -n "$signing_key" ]] ||
+    die "No Git signing key is configured; run this script with --sign first"
+  validate_signing_key "$signing_key"
+
+  gpg --batch --armor --export-options export-minimal --export "$signing_key" ||
+    die "Failed to export the configured OpenPGP public key"
 }
 
 list_matching_signing_keys() {
@@ -218,6 +237,12 @@ main() {
   local current_key
   local signing_enabled="false"
 
+  if [[ "${1:-}" == "--export-public-key" ]]; then
+    (($# == 1)) || die "--export-public-key does not accept other options"
+    export_configured_public_key
+    return
+  fi
+
   while (($#)); do
     case "$1" in
       --name)
@@ -305,6 +330,7 @@ main() {
   ok "Git includes the private identity without storing it in this repository"
   if [[ "$signing_enabled" == "true" ]]; then
     info "Back up the OpenPGP secret key separately; never commit it to dotfiles"
+    info "Export the public key with: bin/git-identity --export-public-key"
   fi
 }
 

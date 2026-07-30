@@ -11,7 +11,7 @@ fail() { printf '\033[1;31m[fail]\033[0m %s\n' "$*" >&2; FAILURES=$((FAILURES + 
 
 usage() {
   cat <<'EOF'
-Usage: ./check [all|lazygit|yazi|fcitx5|git-identity|onepiece|plymouth|security] [...]
+Usage: ./check [all|lazygit|yazi|hypr|fcitx5|git-identity|onepiece|plymouth|security] [...]
 EOF
 }
 
@@ -66,10 +66,27 @@ check_yazi() {
   fi
 }
 
+check_hypr() {
+  local file="$ROOT/config/hypr/input.lua"
+
+  [[ -s "$file" ]] || {
+    fail "Missing Hyprland input configuration"
+    return
+  }
+  grep -q 'input.keyboard.key' "$file" ||
+    fail "Hyprland input configuration does not monitor keyboard events"
+  grep -q 'fcitx5-remote -t' "$file" ||
+    fail "Hyprland input configuration does not toggle Fcitx5"
+  grep -q 'local left_shift_keycode = 50' "$file" ||
+    fail "Hyprland input configuration does not identify left Shift"
+  ok "Hyprland input configuration is valid"
+}
+
 check_fcitx5() {
   local config="$ROOT/config/fcitx5"
   local rime="$ROOT/share/fcitx5/rime"
-  local source_revision="$ROOT/sources/rime-japanese.rev"
+  local japanese_revision="$ROOT/sources/rime-japanese.rev"
+  local snomiao_revision="$ROOT/sources/rime-snomiao.rev"
   local theme="$ROOT/share/fcitx5/themes/catppuccin-macchiato-maroon"
   local file
 
@@ -79,33 +96,33 @@ check_fcitx5() {
     "$config/conf/classicui.conf" \
     "$rime/default.custom.yaml" \
     "$rime/japanese.dict.yaml" \
+    "$rime/japanese_pinyin.schema.yaml" \
     "$rime/japanese_tw_eng.schema.yaml" \
     "$rime/rime_ice.custom.yaml" \
     "$rime/sno_japanese.schema.yaml" \
+    "$rime/translate_en2jp.schema.yaml" \
     "$rime/opencc/hiragana_katakana.json" \
     "$rime/opencc/hiragana_katakana.txt" \
-    "$source_revision" \
+    "$rime/opencc/jpzh.json" \
+    "$rime/opencc/zhjp.json" \
+    "$japanese_revision" \
+    "$snomiao_revision" \
     "$theme/theme.conf"; do
     [[ -s "$file" ]] || fail "Missing input-method file: ${file#"$ROOT/"}"
   done
 
   grep -q '^DefaultIM=rime$' "$config/profile" ||
     fail "Fcitx5 profile does not select Rime by default"
+  grep -A1 '^\[Hotkey/AltTriggerKeys\]$' "$config/config" |
+    grep -q '^0=Shift_L$' ||
+    fail "Fcitx5 left Shift does not temporarily toggle the input method"
   grep -q '^Theme=catppuccin-macchiato-maroon$' "$config/conf/classicui.conf" ||
     fail "Fcitx5 Classic UI does not select the bundled theme"
-  grep -q 'rime_ice_suggestion' "$rime/default.custom.yaml" ||
-    fail "Rime override does not include the Rime Ice suggestion recipe"
-  grep -q 'schema: japanese_tw_eng' "$rime/default.custom.yaml" ||
-    fail "Rime schema list does not include multilingual input"
-  grep -q 'schema: sno_japanese' "$rime/default.custom.yaml" ||
-    fail "Rime schema list does not include Japanese input"
-  grep -q 'schema_id: japanese_tw_eng' "$rime/japanese_tw_eng.schema.yaml" ||
-    fail "Multilingual Rime schema ID is missing"
-  grep -q 'schema_id: sno_japanese' "$rime/sno_japanese.schema.yaml" ||
-    fail "Japanese Rime schema ID is missing"
-  grep -Eq '^[0-9a-f]{40}$' "$source_revision" ||
+  grep -Eq '^[0-9a-f]{40}$' "$japanese_revision" ||
     fail "Rime Japanese source revision is invalid"
-  grep -q 'rime_deployer --build' "$ROOT/install" ||
+  grep -Eq '^[0-9a-f]{40}$' "$snomiao_revision" ||
+    fail "Rime Snomiao source revision is invalid"
+  grep -q 'rime_deployer' "$ROOT/install" ||
     fail "Fcitx5 installation does not deploy Rime data"
   grep -q 'systemctl --user restart' "$ROOT/install" ||
     fail "Fcitx5 installation does not restart the Omarchy user service"
@@ -141,6 +158,10 @@ check_git_identity() {
     fail "Git identity setup cannot generate an OpenPGP key"
   grep -q -- '--list-secret-keys' "$script" ||
     fail "Git identity setup does not validate local secret keys"
+  grep -q -- '--export-public-key' "$script" ||
+    fail "Git identity setup cannot export the configured public key"
+  grep -q -- 'export-options export-minimal' "$script" ||
+    fail "Git identity setup does not minimize exported public keys"
 }
 
 check_language_policy() {
@@ -201,6 +222,7 @@ check_onepiece() {
 
 check_plymouth() {
   local theme="$ROOT/system/plymouth/themes/zoro"
+  local preview="$ROOT/assets/zoro-plymouth.gif"
   local script="$theme/zoro.script"
   local descriptor="$theme/zoro.plymouth"
   local media="$theme/media"
@@ -209,10 +231,14 @@ check_plymouth() {
   local missing=0
   local count
   local dimensions
+  local preview_dimensions
+  local preview_frames
 
-  for frame in "$script" "$descriptor" "$theme/bullet.png" "$theme/entry.png"; do
+  for frame in "$script" "$descriptor" "$theme/bullet.png" "$theme/entry.png" "$preview"; do
     [[ -s "$frame" ]] || fail "Missing Plymouth asset: ${frame#"$ROOT/"}"
   done
+  grep -q 'assets/zoro-plymouth.gif' "$ROOT/README.md" ||
+    fail "README does not include the Zoro Plymouth preview"
 
   max_frame=$(sed -nE 's/.*i <= ([0-9]+).*/\1/p' "$script" | head -n 1)
   [[ "$max_frame" =~ ^[0-9]+$ ]] || {
@@ -237,6 +263,19 @@ check_plymouth() {
     fail "zoro.plymouth has an unexpected ScriptFile"
 
   if command -v magick >/dev/null 2>&1; then
+    if magick identify "$preview" >/dev/null 2>&1; then
+      ok "Zoro README animation is a valid GIF"
+    else
+      fail "Zoro README animation is invalid"
+    fi
+    preview_dimensions=$(magick identify \
+      -format '%[fx:page.width]x%[fx:page.height]\n' \
+      "$preview[0]")
+    [[ "$preview_dimensions" == "640x360" ]] ||
+      fail "Zoro README animation has unexpected dimensions: $preview_dimensions"
+    preview_frames=$(magick identify -format '%n\n' "$preview" | head -n 1)
+    [[ "$preview_frames" == "77" ]] ||
+      fail "Zoro README animation has an unexpected frame count: $preview_frames"
     dimensions=$(find "$media" -maxdepth 1 -type f -name '*.png' -print0 |
       sort -zV |
       xargs -0 magick identify -format '%wx%h\n' |
@@ -286,6 +325,7 @@ run_check() {
     all)
       check_lazygit
       check_yazi
+      check_hypr
       check_fcitx5
       check_git_identity
       check_onepiece
@@ -295,6 +335,7 @@ run_check() {
       ;;
     lazygit) check_lazygit ;;
     yazi) check_yazi ;;
+    hypr) check_hypr ;;
     fcitx5) check_fcitx5 ;;
     git-identity) check_git_identity ;;
     onepiece) check_onepiece ;;

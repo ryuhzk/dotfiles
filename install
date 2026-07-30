@@ -19,9 +19,10 @@ usage() {
 Usage: ./install [--dry-run] <module> [module...]
 
 Modules:
-  all        Install lazygit, yazi, fcitx5, and onepiece (not Plymouth)
+  all        Install lazygit, yazi, hypr, fcitx5, and onepiece (not Plymouth)
   lazygit    Link the Lazygit configuration
   yazi       Link the Yazi configuration
+  hypr       Copy the Hyprland input configuration
   fcitx5     Copy Fcitx5/Rime preferences and the Catppuccin theme
   onepiece   Copy the One Piece theme into the Omarchy user theme directory
   plymouth   Install Zoro system-wide and rebuild the initramfs
@@ -110,6 +111,7 @@ prepare_pinned_git_source() {
   local revision="$2"
   local dest="$3"
   local current_revision
+  shift 3
 
   if [[ -d "$dest/.git" ]]; then
     current_revision="$(git -C "$dest" rev-parse HEAD 2>/dev/null || true)"
@@ -123,21 +125,28 @@ prepare_pinned_git_source() {
   run mkdir -p "$dest"
   run git -C "$dest" init -q
   run git -C "$dest" remote add origin "$url"
-  run git -C "$dest" fetch --depth 1 origin "$revision"
+  run git -C "$dest" sparse-checkout init --no-cone
+  run git -C "$dest" sparse-checkout set --no-cone "$@"
+  run git -C "$dest" fetch --depth 1 --filter=blob:none origin "$revision"
   run git -C "$dest" checkout -q --detach FETCH_HEAD
 }
 
 deploy_rime() {
   local rime_dest="$1"
   local rime_build="$rime_dest/build"
+  local deploy_log="$STATE_HOME/dotfiles/rime-deploy.log"
 
   command -v rime_deployer >/dev/null 2>&1 ||
     die "rime_deployer is required; install fcitx5-rime before this module"
 
   info "Deploying Rime schemas and dictionaries"
-  mkdir -p "$rime_build"
-  rime_deployer --build "$rime_dest" /usr/share/rime-data "$rime_build" ||
-    die "Rime deployment failed"
+  mkdir -p "$rime_build" "$(dirname "$deploy_log")"
+  if ! rime_deployer \
+    --build "$rime_dest" /usr/share/rime-data "$rime_build" \
+    >"$deploy_log" 2>&1; then
+    tail -n 80 "$deploy_log" >&2
+    die "Rime deployment failed; see $deploy_log"
+  fi
   ok "Deployed Rime configuration"
 }
 
@@ -168,33 +177,58 @@ install_fcitx5() {
   local dest="$CONFIG_HOME/fcitx5"
   local rime_src="$ROOT/share/fcitx5/rime"
   local rime_dest="$DATA_HOME/fcitx5/rime"
-  local rime_source_revision_file="$ROOT/sources/rime-japanese.rev"
-  local rime_source_url="https://github.com/gkovacs/rime-japanese.git"
-  local rime_source_revision
-  local rime_source_cache
+  local japanese_revision_file="$ROOT/sources/rime-japanese.rev"
+  local japanese_url="https://github.com/gkovacs/rime-japanese.git"
+  local japanese_revision
+  local japanese_cache
+  local snomiao_revision_file="$ROOT/sources/rime-snomiao.rev"
+  local snomiao_url="https://github.com/snomiao/rime-snomiao.git"
+  local snomiao_revision
+  local snomiao_cache
   local theme_name="catppuccin-macchiato-maroon"
   local theme_src="$ROOT/share/fcitx5/themes/$theme_name"
   local theme_dest="$DATA_HOME/fcitx5/themes/$theme_name"
   local rime_files=(
     default.custom.yaml
     japanese.dict.yaml
+    japanese_pinyin.schema.yaml
     japanese_tw_eng.schema.yaml
     rime_ice.custom.yaml
     sno_japanese.schema.yaml
+    translate_en2jp.schema.yaml
+  )
+  local rime_opencc_files=(
+    hiragana_katakana.json
+    hiragana_katakana.txt
+    jpzh.json
+    zhjp.json
   )
   local japanese_dictionary_files=(
     japanese.jmdict.dict.yaml
     japanese.kana.dict.yaml
     japanese.mozc.dict.yaml
   )
+  local snomiao_dictionary_files=(
+    japanese_chars.dict.yaml
+    japanese_pinyin.dict.yaml
+    japanese_pinyin_simp.dict.yaml
+    pinyin_simp.dict.yaml
+    translate_en2jp.dict.yaml
+    opencc/zhjp_daily.txt
+    opencc/zhjp_word.txt
+  )
   local file
   local name
 
   "$ROOT/check" fcitx5
-  read -r rime_source_revision < "$rime_source_revision_file"
-  [[ "$rime_source_revision" =~ ^[0-9a-f]{40}$ ]] ||
+  read -r japanese_revision < "$japanese_revision_file"
+  [[ "$japanese_revision" =~ ^[0-9a-f]{40}$ ]] ||
     die "Invalid Rime Japanese source revision"
-  rime_source_cache="$CACHE_HOME/dotfiles/sources/rime-japanese/$rime_source_revision"
+  japanese_cache="$CACHE_HOME/dotfiles/sources/rime-japanese/$japanese_revision"
+  read -r snomiao_revision < "$snomiao_revision_file"
+  [[ "$snomiao_revision" =~ ^[0-9a-f]{40}$ ]] ||
+    die "Invalid Rime Snomiao source revision"
+  snomiao_cache="$CACHE_HOME/dotfiles/sources/rime-snomiao/$snomiao_revision"
 
   if [[ -L "$dest" ]]; then
     backup_user_path "$dest" "fcitx5-directory"
@@ -214,27 +248,42 @@ install_fcitx5() {
       "$rime_dest/$name" \
       "fcitx5-rime-$name"
   done
-  install_copied_file \
-    "$rime_src/opencc/hiragana_katakana.json" \
-    "$rime_dest/opencc/hiragana_katakana.json" \
-    "fcitx5-rime-hiragana_katakana.json"
-  install_copied_file \
-    "$rime_src/opencc/hiragana_katakana.txt" \
-    "$rime_dest/opencc/hiragana_katakana.txt" \
-    "fcitx5-rime-hiragana_katakana.txt"
+  for name in "${rime_opencc_files[@]}"; do
+    install_copied_file \
+      "$rime_src/opencc/$name" \
+      "$rime_dest/opencc/$name" \
+      "fcitx5-rime-opencc-$name"
+  done
 
   prepare_pinned_git_source \
-    "$rime_source_url" \
-    "$rime_source_revision" \
-    "$rime_source_cache"
+    "$japanese_url" \
+    "$japanese_revision" \
+    "$japanese_cache" \
+    "${japanese_dictionary_files[@]}"
   for name in "${japanese_dictionary_files[@]}"; do
-    if (( DRY_RUN )) && [[ ! -f "$rime_source_cache/$name" ]]; then
-      show_command cp -a "$rime_source_cache/$name" "$rime_dest/$name"
+    if (( DRY_RUN )) && [[ ! -f "$japanese_cache/$name" ]]; then
+      show_command cp -a "$japanese_cache/$name" "$rime_dest/$name"
     else
       install_copied_file \
-        "$rime_source_cache/$name" \
+        "$japanese_cache/$name" \
         "$rime_dest/$name" \
         "fcitx5-rime-$name"
+    fi
+  done
+
+  prepare_pinned_git_source \
+    "$snomiao_url" \
+    "$snomiao_revision" \
+    "$snomiao_cache" \
+    "${snomiao_dictionary_files[@]/#/Rime/}"
+  for name in "${snomiao_dictionary_files[@]}"; do
+    if (( DRY_RUN )) && [[ ! -f "$snomiao_cache/Rime/$name" ]]; then
+      show_command cp -a "$snomiao_cache/Rime/$name" "$rime_dest/$name"
+    else
+      install_copied_file \
+        "$snomiao_cache/Rime/$name" \
+        "$rime_dest/$name" \
+        "fcitx5-rime-${name//\//-}"
     fi
   done
   install_copied_directory "$theme_src" "$theme_dest" "fcitx5-theme-$theme_name"
@@ -244,6 +293,20 @@ install_fcitx5() {
     activate_fcitx5_configuration
   fi
   ok "Installed Fcitx5/Rime preferences"
+}
+
+install_hypr() {
+  local src="$ROOT/config/hypr/input.lua"
+  local dest="$CONFIG_HOME/hypr/input.lua"
+
+  "$ROOT/check" hypr
+  install_copied_file "$src" "$dest" "hypr-input.lua"
+
+  if (( ! DRY_RUN )) && command -v hyprctl >/dev/null 2>&1; then
+    hyprctl reload
+    hyprctl configerrors
+  fi
+  ok "Installed Hyprland input configuration"
 }
 
 install_onepiece() {
@@ -383,10 +446,12 @@ main() {
       all)
         install_linked_config lazygit
         install_linked_config yazi
+        install_hypr
         install_fcitx5
         install_onepiece
         ;;
       lazygit|yazi) install_linked_config "$arg" ;;
+      hypr) install_hypr ;;
       fcitx5) install_fcitx5 ;;
       onepiece) install_onepiece ;;
       plymouth) install_plymouth ;;
