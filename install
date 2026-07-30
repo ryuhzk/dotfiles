@@ -19,10 +19,11 @@ usage() {
 Usage: ./install [--dry-run] <module> [module...]
 
 Modules:
-  all        Install lazygit, yazi, hypr, fcitx5, and onepiece (not Plymouth)
+  all        Install lazygit, yazi, translation, hypr, fcitx5, and onepiece
   lazygit    Link the Lazygit configuration
   yazi       Link the Yazi configuration
-  hypr       Copy the Hyprland input configuration
+  translation Install translation commands, Neovim support, and the Omarchy panel
+  hypr       Copy the Hyprland input and keybinding configuration
   fcitx5     Copy Fcitx5/Rime preferences and the Catppuccin theme
   onepiece   Copy the One Piece theme into the Omarchy user theme directory
   plymouth   Install Zoro system-wide and rebuild the initramfs
@@ -54,7 +55,7 @@ backup_user_path() {
 
   [[ -e "$path" || -L "$path" ]] || return 0
   info "Backing up $path"
-  run mkdir -p "$BACKUP_ROOT"
+  run mkdir -p "$BACKUP_ROOT/$(dirname "$name")"
   run mv -- "$path" "$BACKUP_ROOT/$name"
 }
 
@@ -219,6 +220,10 @@ install_fcitx5() {
   )
   local file
   local name
+  local obsolete_rime_files=(
+    lua/translation.lua
+    rime.lua
+  )
 
   "$ROOT/check" fcitx5
   read -r japanese_revision < "$japanese_revision_file"
@@ -247,6 +252,13 @@ install_fcitx5() {
       "$rime_src/$name" \
       "$rime_dest/$name" \
       "fcitx5-rime-$name"
+  done
+  for name in "${obsolete_rime_files[@]}"; do
+    if [[ -e "$rime_dest/$name" || -L "$rime_dest/$name" ]]; then
+      info "Removing obsolete Rime translation entry point: $name"
+      run mkdir -p "$BACKUP_ROOT/fcitx5-rime-obsolete/$(dirname "$name")"
+      run mv -- "$rime_dest/$name" "$BACKUP_ROOT/fcitx5-rime-obsolete/$name"
+    fi
   done
   for name in "${rime_opencc_files[@]}"; do
     install_copied_file \
@@ -296,17 +308,61 @@ install_fcitx5() {
 }
 
 install_hypr() {
-  local src="$ROOT/config/hypr/input.lua"
-  local dest="$CONFIG_HOME/hypr/input.lua"
+  local name
 
   "$ROOT/check" hypr
-  install_copied_file "$src" "$dest" "hypr-input.lua"
+  for name in input.lua bindings.lua; do
+    install_copied_file \
+      "$ROOT/config/hypr/$name" \
+      "$CONFIG_HOME/hypr/$name" \
+      "hypr-$name"
+  done
 
   if (( ! DRY_RUN )) && command -v hyprctl >/dev/null 2>&1; then
     hyprctl reload
     hyprctl configerrors
   fi
   ok "Installed Hyprland input configuration"
+}
+
+install_translation() {
+  local command_src="$ROOT/bin/dotfiles-translate"
+  local command_dest="$HOME/.local/bin/dotfiles-translate"
+  local core_src="$ROOT/share/translation/core.lua"
+  local core_dest="$DATA_HOME/dotfiles/translation/core.lua"
+  local example_src="$ROOT/config/translation/translation.env.example"
+  local example_dest="$CONFIG_HOME/dotfiles/translation.env.example"
+  local private_config="$CONFIG_HOME/dotfiles/translation.env"
+  local nvim_plugin_src="$ROOT/share/nvim/site/plugin/dotfiles-translation.lua"
+  local nvim_plugin_dest="$DATA_HOME/nvim/site/plugin/dotfiles-translation.lua"
+  local omarchy_plugin_src="$ROOT/omarchy/plugins/local.translation"
+  local omarchy_plugin_dest="$CONFIG_HOME/omarchy/plugins/local.translation"
+
+  "$ROOT/check" translation
+  install_copied_file "$command_src" "$command_dest" "dotfiles-translate"
+  install_copied_file "$core_src" "$core_dest" "translation-core.lua"
+  install_copied_file "$example_src" "$example_dest" "translation.env.example"
+  install_copied_file "$nvim_plugin_src" "$nvim_plugin_dest" "nvim-site-plugin-dotfiles-translation.lua"
+  install_copied_directory "$omarchy_plugin_src" "$omarchy_plugin_dest" "omarchy-plugin-local.translation"
+  run chmod 0755 "$command_dest"
+
+  if [[ ! -e "$private_config" ]]; then
+    run cp -a "$example_src" "$private_config"
+    run chmod 0600 "$private_config"
+    info "Created private translation config: $private_config"
+  fi
+  if (( DRY_RUN )); then
+    show_command omarchy plugin rescan
+    show_command omarchy plugin enable local.translation
+    show_command omarchy bar plugin move local.translation --section right --index 0
+  elif command -v omarchy >/dev/null 2>&1 && omarchy-shell shell ping >/dev/null 2>&1; then
+    omarchy plugin rescan
+    omarchy plugin enable local.translation
+    omarchy bar plugin move local.translation --section right --index 0
+  else
+    warn "Omarchy Shell is unavailable; enable local.translation after the shell starts"
+  fi
+  ok "Installed global translation support"
 }
 
 install_onepiece() {
@@ -446,11 +502,13 @@ main() {
       all)
         install_linked_config lazygit
         install_linked_config yazi
+        install_translation
         install_hypr
         install_fcitx5
         install_onepiece
         ;;
       lazygit|yazi) install_linked_config "$arg" ;;
+      translation) install_translation ;;
       hypr) install_hypr ;;
       fcitx5) install_fcitx5 ;;
       onepiece) install_onepiece ;;

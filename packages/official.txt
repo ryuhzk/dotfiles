@@ -1,5 +1,10 @@
-# Optional packages not currently provided by this Omarchy installation.
+# Packages required by optional modules.
 yazi
+curl
+jq
+lua
+wl-clipboard
+wtype
 fcitx5
 fcitx5-configtool
 fcitx5-rime

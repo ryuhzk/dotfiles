@@ -4,6 +4,7 @@ private/
 *.env
 *.env.*
 !.env.example
+!config/translation/translation.env.example
 
 # Credentials and private keys
 *.key
@@ -29,4 +30,3 @@ Thumbs.db
 *~
 __pycache__/
 *.pyc
-
