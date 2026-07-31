@@ -356,6 +356,7 @@ check_language_policy() {
 check_onepiece() {
   local theme="$ROOT/omarchy/themes/onepiece"
   local colors="$theme/colors.toml"
+  local controls
   local backgrounds
   local key
 
@@ -385,6 +386,29 @@ check_onepiece() {
   fi
 
   [[ -s "$theme/icons.theme" ]] || fail "One Piece theme is missing icons.theme"
+
+  # `omarchy theme set` merges shell.<section>.toml over the whole matching
+  # section of the generated shell.toml, so a partial file silently drops the
+  # tokens it omits. Keep every state the shell reads represented here.
+  controls="$theme/shell.controls.toml"
+  if [[ -s "$controls" ]]; then
+    for key in normal-fill-alpha normal-border-width hover-cursor-fill-alpha \
+      focus-fill-alpha focus-border-width selected-fill-alpha pressed-fill-alpha; do
+      grep -Eq "^[[:space:]]*$key[[:space:]]*=" "$controls" ||
+        fail "One Piece control styling is missing '$key'"
+    done
+    # A borderless control set that also drops the focus outline leaves
+    # keyboard focus invisible.
+    if grep -Eq '^[[:space:]]*focus-border-width[[:space:]]*=[[:space:]]*0[[:space:]]*$' "$controls" &&
+      grep -Eq '^[[:space:]]*focus-fill-alpha[[:space:]]*=[[:space:]]*0(\.0+)?[[:space:]]*$' "$controls"; then
+      fail "One Piece control styling leaves keyboard focus with no visible cue"
+    fi
+    if grep -Eq '^[[:space:]]*(normal|hover-cursor|focus|selected)-color[[:space:]]*=[[:space:]]*"#' "$controls"; then
+      warn "One Piece control styling hardcodes hex instead of palette role names"
+    fi
+    ok "One Piece control styling covers every shell state token"
+  fi
+
   ok "One Piece theme structure is valid"
 }
 

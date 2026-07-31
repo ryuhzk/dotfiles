@@ -1,0 +1,38 @@
+# Fill-first control chrome for the Omarchy shell.
+#
+# Omarchy's defaults are border-first: a 1px outline over an almost
+# transparent fill (normal-fill-alpha 0.04, normal-border-width 1). That is
+# what gives the stock shell its terminal look. Material-style surfaces invert
+# it — no outline, and a tonal fill that carries the shape instead.
+#
+# `omarchy theme set` merges any themes/<name>/shell.<section>.toml into the
+# generated shell.toml, replacing that whole section. Every token this theme
+# needs is therefore repeated here rather than inherited. Palette role names
+# are used instead of hex so the section keeps following colors.toml.
+#
+# Corner rounding is not set here: Style.cornerRadius mirrors Hyprland's
+# decoration:rounding, which config/hypr/looknfeel.lua owns.
+
+normal-color        = "foreground"
+normal-fill-alpha   = 0.10
+normal-border-width = 0
+
+hover-cursor-color        = "foreground"
+hover-cursor-fill-alpha   = 0.16
+hover-cursor-border-width = 0
+
+# Keyboard focus keeps both a stronger fill and an outline. With the shared
+# border gone, a fill-only focus state is too easy to lose track of, and the
+# border color resolves through a different path than the state color, so
+# neither cue is relied on alone.
+focus-color        = "accent"
+focus-fill-alpha   = 0.24
+focus-border-width = 1
+focus-border-alpha = 0.9
+
+selected-color        = "accent"
+selected-fill-alpha   = 0.28
+selected-border-width = 0
+
+pressed-fill-alpha   = 0.24
+selection-fill-alpha = 0.35
