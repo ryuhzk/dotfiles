@@ -17,6 +17,18 @@ for this copy should be recorded before publication.
 Before making the repository public, replace any asset that cannot be
 redistributed and add source and license information for every retained asset.
 
+## Desktop appearance
+
+`config/hypr/looknfeel.lua` and `share/shaders/anti-flashbang.glsl` were written
+for this repository and are covered by its MIT license.
+
+Their design was informed by [end-4/dots-hyprland](https://github.com/end-4/dots-hyprland),
+which is GPL-3.0. No code was copied from it. The appearance file is a set of
+Hyprland configuration values, and the shader is an independent implementation
+of the same idea — estimate average screen luminance, then attenuate output in
+proportion to it. Keep it that way: copying source from that project would make
+this repository's MIT license incorrect.
+
 ## Input-method data
 
 The repository contains original integration schemas derived from the behavior

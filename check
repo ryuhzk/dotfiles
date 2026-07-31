@@ -11,7 +11,7 @@ fail() { printf '\033[1;31m[fail]\033[0m %s\n' "$*" >&2; FAILURES=$((FAILURES + 
 
 usage() {
   cat <<'EOF'
-Usage: ./check [all|lazygit|yazi|translation|hypr|fcitx5|git-identity|onepiece|plymouth|security] [...]
+Usage: ./check [all|lazygit|yazi|translation|hypr|looknfeel|fcitx5|git-identity|onepiece|plymouth|security] [...]
 EOF
 }
 
@@ -89,6 +89,85 @@ check_hypr() {
   grep -Fq '\"$HOME\"/.local/bin/dotfiles-translate --replace' "$bindings" ||
     fail "Hyprland translation shortcut does not replace selected text"
   ok "Hyprland input configuration is valid"
+}
+
+check_looknfeel() {
+  local config="$ROOT/config/hypr/looknfeel.lua"
+  local shader="$ROOT/share/shaders/anti-flashbang.glsl"
+  local command="$ROOT/bin/dotfiles-flashbang"
+  local file
+  local curve
+  local undefined
+
+  for file in "$config" "$shader"; do
+    [[ -s "$file" ]] || {
+      fail "Missing appearance file: ${file#"$ROOT/"}"
+      return
+    }
+  done
+  [[ -x "$command" ]] || fail "Anti-flashbang command is not executable"
+
+  if command -v lua >/dev/null 2>&1; then
+    if lua -e "assert(loadfile('$config'))"; then
+      ok "Hyprland appearance overrides have valid Lua syntax"
+    else
+      fail "Hyprland appearance overrides have invalid Lua syntax"
+    fi
+  else
+    warn "Lua is unavailable; skipped appearance syntax check"
+  fi
+
+  # Omarchy's themes own the border colors. Setting them here would silently
+  # detach the borders from `omarchy theme set`.
+  if grep -Eq '^[[:space:]]*(active_border|inactive_border|col)[[:space:]]*=' "$config"; then
+    fail "Appearance overrides must leave border colors to the active Omarchy theme"
+  else
+    ok "Appearance overrides leave border colors to Omarchy"
+  fi
+
+  grep -q 'rounding_power' "$config" ||
+    fail "Appearance overrides do not set a corner profile"
+  grep -Eq '^[[:space:]]*passes[[:space:]]*=' "$config" ||
+    fail "Appearance overrides do not configure blur"
+  grep -Eq 'leaf = "workspaces", enabled = true' "$config" ||
+    fail "Appearance overrides do not re-enable the workspace slide animation"
+  grep -q 'gaps_workspaces' "$config" ||
+    fail "Appearance overrides do not separate sliding workspaces"
+
+  # Every curve referenced by an animation has to be defined in the same file;
+  # Hyprland silently falls back to a default curve otherwise.
+  undefined=""
+  while read -r curve; do
+    grep -Fq "hl.curve(\"$curve\"" "$config" || undefined+=" $curve"
+  done < <(sed -nE 's/.*bezier = "([^"]+)".*/\1/p' "$config" | sort -u)
+  if [[ -n "$undefined" ]]; then
+    fail "Animations reference undefined curves:$undefined"
+  else
+    ok "Every animation curve referenced is defined"
+  fi
+
+  grep -q '#version 300 es' "$shader" ||
+    fail "Anti-flashbang shader is missing its GLSL ES version directive"
+  grep -q 'v_texcoord' "$shader" ||
+    fail "Anti-flashbang shader does not read Hyprland's texture coordinate"
+  grep -q 'uniform sampler2D tex' "$shader" ||
+    fail "Anti-flashbang shader does not declare Hyprland's screen texture"
+  grep -q 'fragColor' "$shader" ||
+    fail "Anti-flashbang shader does not write a fragment color"
+
+  # `hyprctl keyword` is rejected by Hyprland's Lua parser; only eval works.
+  grep -q 'hyprctl eval' "$command" ||
+    fail "Anti-flashbang command does not use the Lua-compatible hyprctl entry point"
+  if grep -q 'hyprctl keyword' "$command"; then
+    fail "Anti-flashbang command uses hyprctl keyword, which the Lua parser rejects"
+  fi
+  if bash -n "$command"; then
+    ok "Anti-flashbang command has valid Bash syntax"
+  else
+    fail "Anti-flashbang command has invalid Bash syntax"
+  fi
+
+  ok "Hyprland appearance module is valid"
 }
 
 check_translation() {
@@ -416,6 +495,7 @@ run_check() {
       check_yazi
       check_translation
       check_hypr
+      check_looknfeel
       check_fcitx5
       check_git_identity
       check_onepiece
@@ -427,6 +507,7 @@ run_check() {
     yazi) check_yazi ;;
     translation) check_translation ;;
     hypr) check_hypr ;;
+    looknfeel) check_looknfeel ;;
     fcitx5) check_fcitx5 ;;
     git-identity) check_git_identity ;;
     onepiece) check_onepiece ;;

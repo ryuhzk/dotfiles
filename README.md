@@ -10,6 +10,7 @@ personal additions:
 - Fcitx5 + Rime input-method preferences
 - Local-LLM Omarchy panel, global shortcut, and Neovim translation
 - Custom multilingual Chinese/Japanese/English and Japanese-only Rime schemas
+- Hyprland appearance overrides and an anti-flashbang screen shader
 - The custom `onepiece` Omarchy theme
 - The animated `zoro` Plymouth theme
 
@@ -25,7 +26,8 @@ only small user-owned input and keybinding overrides.
 
 Tested against:
 
-- Omarchy `4.0.0.r1429.gf4e8470-1` (`edge`)
+- Omarchy `4.0.0.r1472.g283276b-1` (`edge`)
+- Hyprland `0.56.1`
 - Lazygit `0.63.1`
 - Yazi `26.5.6`
 - Plymouth `26.134.222`
@@ -49,9 +51,9 @@ Install the unprivileged modules:
 ./install all
 ```
 
-`all` installs Lazygit, Yazi, translation support, Hyprland overrides, Fcitx5,
-and the One Piece theme. It deliberately excludes Plymouth because changing
-the boot splash rebuilds the initramfs.
+`all` installs Lazygit, Yazi, translation support, Hyprland overrides,
+appearance overrides, Fcitx5, and the One Piece theme. It deliberately excludes
+Plymouth because changing the boot splash rebuilds the initramfs.
 
 Install packages required by the optional modules:
 
@@ -80,6 +82,46 @@ omarchy theme set onepiece
 ```
 
 The installer does not switch themes automatically.
+
+## Appearance
+
+The `looknfeel` module replaces Omarchy's conservative Hyprland defaults with a
+more animated desktop, without touching any keybinding:
+
+```bash
+./install looknfeel
+```
+
+It installs `~/.config/hypr/looknfeel.lua`, which Omarchy loads after both its
+own defaults and the active theme's Hyprland overrides. It turns on blur,
+shadows, rounded corners, and inactive-window dimming; re-enables the workspace
+slide animation that Omarchy disables; and replaces the default easing with
+Material 3 expressive curves, where spatial properties overshoot slightly before
+settling and opacity never does.
+
+Window border colors are deliberately left alone so `omarchy theme set` keeps
+control of them. `./check looknfeel` enforces this, and also verifies that every
+easing curve referenced by an animation is actually defined — Hyprland silently
+substitutes a default curve for a misspelled name.
+
+The same module installs an anti-flashbang screen shader. It estimates the
+average luminance of the screen each frame and dims the output in proportion, so
+a white window opening at night never reaches full intensity. Dark content is
+left untouched:
+
+```bash
+dotfiles-flashbang          # toggle
+dotfiles-flashbang status
+```
+
+The shader is a runtime toggle. `hyprctl reload`, a Hyprland restart, or a
+logout all clear it, so a shader can never make the desktop unusable across
+sessions. To keep it on permanently, uncomment the `screen_shader` block at the
+bottom of `config/hypr/looknfeel.lua`. Hyprland supports one screen shader at a
+time, so enabling this replaces any other.
+
+Note that on Omarchy 4 the Hyprland config is Lua, and `hyprctl keyword` no
+longer works against it. Runtime changes have to go through `hyprctl eval`.
 
 ## Input methods
 

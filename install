@@ -19,11 +19,12 @@ usage() {
 Usage: ./install [--dry-run] <module> [module...]
 
 Modules:
-  all        Install lazygit, yazi, translation, hypr, fcitx5, and onepiece
+  all        Install lazygit, yazi, translation, hypr, looknfeel, fcitx5, and onepiece
   lazygit    Link the Lazygit configuration
   yazi       Link the Yazi configuration
   translation Install translation commands, Neovim support, and the Omarchy panel
   hypr       Copy the Hyprland input and keybinding configuration
+  looknfeel  Copy the Hyprland appearance overrides and the anti-flashbang shader
   fcitx5     Copy Fcitx5/Rime preferences and the Catppuccin theme
   onepiece   Copy the One Piece theme into the Omarchy user theme directory
   plymouth   Install Zoro system-wide and rebuild the initramfs
@@ -325,6 +326,28 @@ install_hypr() {
   ok "Installed Hyprland input configuration"
 }
 
+install_looknfeel() {
+  local config_src="$ROOT/config/hypr/looknfeel.lua"
+  local config_dest="$CONFIG_HOME/hypr/looknfeel.lua"
+  local shader_src="$ROOT/share/shaders/anti-flashbang.glsl"
+  local shader_dest="$DATA_HOME/dotfiles/shaders/anti-flashbang.glsl"
+  local command_src="$ROOT/bin/dotfiles-flashbang"
+  local command_dest="$HOME/.local/bin/dotfiles-flashbang"
+
+  "$ROOT/check" looknfeel
+  install_copied_file "$config_src" "$config_dest" "hypr-looknfeel.lua"
+  install_copied_file "$shader_src" "$shader_dest" "shader-anti-flashbang.glsl"
+  install_copied_file "$command_src" "$command_dest" "dotfiles-flashbang"
+  run chmod 0755 "$command_dest"
+
+  if (( ! DRY_RUN )) && command -v hyprctl >/dev/null 2>&1; then
+    hyprctl reload
+    hyprctl configerrors
+  fi
+  ok "Installed Hyprland appearance overrides"
+  info "Toggle the anti-flashbang shader with: dotfiles-flashbang"
+}
+
 install_translation() {
   local command_src="$ROOT/bin/dotfiles-translate"
   local command_dest="$HOME/.local/bin/dotfiles-translate"
@@ -504,12 +527,14 @@ main() {
         install_linked_config yazi
         install_translation
         install_hypr
+        install_looknfeel
         install_fcitx5
         install_onepiece
         ;;
       lazygit|yazi) install_linked_config "$arg" ;;
       translation) install_translation ;;
       hypr) install_hypr ;;
+      looknfeel) install_looknfeel ;;
       fcitx5) install_fcitx5 ;;
       onepiece) install_onepiece ;;
       plymouth) install_plymouth ;;
