@@ -1,0 +1,25 @@
+# Transparent bar, so the widgets read as floating over the wallpaper rather
+# than sitting on a solid strip. config/hypr/looknfeel.lua blurs the
+# `omarchy-bar` layer namespace, which is what keeps the text legible once the
+# background stops being opaque.
+#
+# `omarchy theme set` replaces this entire section of the generated
+# shell.toml, so the colors below cannot be inherited and are repeated from
+# colors.toml by hand. Unlike [controls], this section resolves through
+# Color.qml rather than Style.qml and does not accept palette role names.
+# Changing accent/foreground/background in colors.toml means changing them
+# here too — ./check onepiece verifies the two stay in sync.
+
+# colors.toml: background
+background       = "#1E2836"
+background-alpha = 0.0
+
+# colors.toml: foreground
+text             = "#F5EDE5"
+
+# Modules calling attention to themselves. colors.toml: color1
+active           = "#E55A6A"
+
+scale-with-font  = true
+size-horizontal  = 26
+size-vertical    = 28

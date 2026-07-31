@@ -93,19 +93,13 @@ check_hypr() {
 
 check_looknfeel() {
   local config="$ROOT/config/hypr/looknfeel.lua"
-  local shader="$ROOT/share/shaders/anti-flashbang.glsl"
-  local command="$ROOT/bin/dotfiles-flashbang"
-  local file
   local curve
   local undefined
 
-  for file in "$config" "$shader"; do
-    [[ -s "$file" ]] || {
-      fail "Missing appearance file: ${file#"$ROOT/"}"
-      return
-    }
-  done
-  [[ -x "$command" ]] || fail "Anti-flashbang command is not executable"
+  [[ -s "$config" ]] || {
+    fail "Missing appearance file: ${config#"$ROOT/"}"
+    return
+  }
 
   if command -v lua >/dev/null 2>&1; then
     if lua -e "assert(loadfile('$config'))"; then
@@ -146,25 +140,10 @@ check_looknfeel() {
     ok "Every animation curve referenced is defined"
   fi
 
-  grep -q '#version 300 es' "$shader" ||
-    fail "Anti-flashbang shader is missing its GLSL ES version directive"
-  grep -q 'v_texcoord' "$shader" ||
-    fail "Anti-flashbang shader does not read Hyprland's texture coordinate"
-  grep -q 'uniform sampler2D tex' "$shader" ||
-    fail "Anti-flashbang shader does not declare Hyprland's screen texture"
-  grep -q 'fragColor' "$shader" ||
-    fail "Anti-flashbang shader does not write a fragment color"
-
-  # `hyprctl keyword` is rejected by Hyprland's Lua parser; only eval works.
-  grep -q 'hyprctl eval' "$command" ||
-    fail "Anti-flashbang command does not use the Lua-compatible hyprctl entry point"
-  if grep -q 'hyprctl keyword' "$command"; then
-    fail "Anti-flashbang command uses hyprctl keyword, which the Lua parser rejects"
-  fi
-  if bash -n "$command"; then
-    ok "Anti-flashbang command has valid Bash syntax"
-  else
-    fail "Anti-flashbang command has invalid Bash syntax"
+  # A screen shader that samples whole-screen brightness per pixel oscillates
+  # with its own content and flickers. Keep the compositor out of that.
+  if grep -q 'screen_shader' "$config"; then
+    fail "Appearance overrides set a screen shader, which flickers on content change"
   fi
 
   ok "Hyprland appearance module is valid"
@@ -353,10 +332,35 @@ check_language_policy() {
   fi
 }
 
+# Compare one hex value duplicated into a theme's shell section against the
+# colors.toml key it was copied from.
+check_bar_color() {
+  local bar_file="$1"
+  local colors_file="$2"
+  local bar_key="$3"
+  local colors_key="$4"
+  local bar_value
+  local colors_value
+
+  bar_value=$(sed -nE "s/^[[:space:]]*$bar_key[[:space:]]*=[[:space:]]*\"([^\"]+)\".*/\1/p" \
+    "$bar_file" | head -n 1)
+  colors_value=$(sed -nE "s/^[[:space:]]*$colors_key[[:space:]]*=[[:space:]]*\"([^\"]+)\".*/\1/p" \
+    "$colors_file" | head -n 1)
+
+  if [[ -z "$bar_value" || -z "$colors_value" ]]; then
+    fail "Unable to compare bar '$bar_key' with colors.toml '$colors_key'"
+    return
+  fi
+  if [[ "${bar_value,,}" != "${colors_value,,}" ]]; then
+    fail "Bar '$bar_key' ($bar_value) no longer matches colors.toml '$colors_key' ($colors_value)"
+  fi
+}
+
 check_onepiece() {
   local theme="$ROOT/omarchy/themes/onepiece"
   local colors="$theme/colors.toml"
   local controls
+  local bar
   local backgrounds
   local key
 
@@ -407,6 +411,33 @@ check_onepiece() {
       warn "One Piece control styling hardcodes hex instead of palette role names"
     fi
     ok "One Piece control styling covers every shell state token"
+  fi
+
+  # [bar] resolves through Color.qml, which takes hex only — no palette role
+  # names — and the section merge replaces the whole block. The colors are
+  # therefore duplicated from colors.toml, so verify they still agree.
+  bar="$theme/shell.bar.toml"
+  if [[ -s "$bar" ]]; then
+    for key in background background-alpha text active size-horizontal size-vertical; do
+      grep -Eq "^[[:space:]]*$key[[:space:]]*=" "$bar" ||
+        fail "One Piece bar styling is missing '$key'"
+    done
+
+    check_bar_color "$bar" "$colors" background background
+    check_bar_color "$bar" "$colors" text foreground
+    check_bar_color "$bar" "$colors" active color1
+
+    if ! grep -Eq '^[[:space:]]*background-alpha[[:space:]]*=[[:space:]]*(0(\.[0-9]+)?|1(\.0+)?)[[:space:]]*$' "$bar"; then
+      fail "One Piece bar background-alpha is not a 0..1 value"
+    fi
+
+    # A see-through bar without blur on its layer is unreadable over a busy
+    # wallpaper, and the blur rule lives in the Hyprland config, not the theme.
+    if grep -Eq '^[[:space:]]*background-alpha[[:space:]]*=[[:space:]]*0(\.0+)?[[:space:]]*$' "$bar" &&
+      ! grep -q 'namespace = "omarchy-bar"' "$ROOT/config/hypr/looknfeel.lua"; then
+      fail "Transparent bar has no matching blur layer rule in looknfeel.lua"
+    fi
+    ok "One Piece bar styling matches colors.toml"
   fi
 
   ok "One Piece theme structure is valid"

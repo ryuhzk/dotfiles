@@ -19,15 +19,14 @@ redistributed and add source and license information for every retained asset.
 
 ## Desktop appearance
 
-`config/hypr/looknfeel.lua` and `share/shaders/anti-flashbang.glsl` were written
-for this repository and are covered by its MIT license.
+`config/hypr/looknfeel.lua` and the One Piece theme's `shell.controls.toml`,
+`shell.bar.toml`, and `hyprland.lua` were written for this repository and are
+covered by its MIT license.
 
 Their design was informed by [end-4/dots-hyprland](https://github.com/end-4/dots-hyprland),
-which is GPL-3.0. No code was copied from it. The appearance file is a set of
-Hyprland configuration values, and the shader is an independent implementation
-of the same idea — estimate average screen luminance, then attenuate output in
-proportion to it. Keep it that way: copying source from that project would make
-this repository's MIT license incorrect.
+which is GPL-3.0. No code was copied from it; these are sets of Hyprland and
+Omarchy configuration values. Keep it that way: copying source from that
+project would make this repository's MIT license incorrect.
 
 ## Input-method data
 

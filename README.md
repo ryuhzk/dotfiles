@@ -10,7 +10,7 @@ personal additions:
 - Fcitx5 + Rime input-method preferences
 - Local-LLM Omarchy panel, global shortcut, and Neovim translation
 - Custom multilingual Chinese/Japanese/English and Japanese-only Rime schemas
-- Hyprland appearance overrides and an anti-flashbang screen shader
+- Hyprland appearance overrides and theme-level Omarchy shell styling
 - The custom `onepiece` Omarchy theme
 - The animated `zoro` Plymouth theme
 
@@ -99,29 +99,47 @@ slide animation that Omarchy disables; and replaces the default easing with
 Material 3 expressive curves, where spatial properties overshoot slightly before
 settling and opacity never does.
 
-Window border colors are deliberately left alone so `omarchy theme set` keeps
-control of them. `./check looknfeel` enforces this, and also verifies that every
-easing curve referenced by an animation is actually defined — Hyprland silently
-substitutes a default curve for a misspelled name.
+Border width is set here because it is theme-agnostic, but border colors are
+deliberately left out so `omarchy theme set` keeps control of them; the One
+Piece theme sets its own below. `./check looknfeel` enforces that split, and
+also verifies that every easing curve referenced by an animation is actually
+defined — Hyprland silently substitutes a default curve for a misspelled name.
 
-The same module installs an anti-flashbang screen shader. It estimates the
-average luminance of the screen each frame and dims the output in proportion, so
-a white window opening at night never reaches full intensity. Dark content is
-left untouched:
+The module also blurs the `omarchy-bar` layer, which is what lets the One Piece
+theme make the bar transparent without the text becoming unreadable.
 
-```bash
-dotfiles-flashbang          # toggle
-dotfiles-flashbang status
-```
-
-The shader is a runtime toggle. `hyprctl reload`, a Hyprland restart, or a
-logout all clear it, so a shader can never make the desktop unusable across
-sessions. To keep it on permanently, uncomment the `screen_shader` block at the
-bottom of `config/hypr/looknfeel.lua`. Hyprland supports one screen shader at a
-time, so enabling this replaces any other.
+An anti-flashbang screen shader was tried here and removed. Estimating average
+screen luminance inside a fragment shader makes the dim factor track screen
+content, so the whole screen visibly pulses whenever anything moves, and a
+stateless shader cannot smooth that over time. For night comfort use Omarchy's
+own `omarchy toggle nightlight`, which shifts color temperature through
+hyprsunset rather than modulating brightness.
 
 Note that on Omarchy 4 the Hyprland config is Lua, and `hyprctl keyword` no
 longer works against it. Runtime changes have to go through `hyprctl eval`.
+
+### Theme-level shell styling
+
+Omarchy's stock control chrome is border-first: a 1px outline over an almost
+transparent fill. That is most of what gives the shell its terminal look. The
+One Piece theme inverts it — no outlines, and a tonal fill that carries the
+shape instead — through three files:
+
+- `shell.controls.toml` — control state tokens, using palette role names so
+  they keep following `colors.toml`
+- `shell.bar.toml` — a transparent bar
+- `hyprland.lua` — muted window borders, since the generated default uses the
+  raw accent at full opacity
+
+`omarchy theme set` merges any `shell.<section>.toml` over the matching section
+of the generated `shell.toml`, and never overwrites a file the theme already
+ships. Both are supported extension points, so none of this touches
+`/usr/share/omarchy`.
+
+The merge replaces a whole section rather than individual keys, so each file
+repeats every token that section needs. `[bar]` resolves through a path that
+takes hex only, so its colors are duplicated from `colors.toml`;
+`./check onepiece` compares the two and fails when they drift apart.
 
 ## Input methods
 

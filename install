@@ -24,7 +24,7 @@ Modules:
   yazi       Link the Yazi configuration
   translation Install translation commands, Neovim support, and the Omarchy panel
   hypr       Copy the Hyprland input and keybinding configuration
-  looknfeel  Copy the Hyprland appearance overrides and the anti-flashbang shader
+  looknfeel  Copy the Hyprland appearance overrides
   fcitx5     Copy Fcitx5/Rime preferences and the Catppuccin theme
   onepiece   Copy the One Piece theme into the Omarchy user theme directory
   plymouth   Install Zoro system-wide and rebuild the initramfs
@@ -329,23 +329,15 @@ install_hypr() {
 install_looknfeel() {
   local config_src="$ROOT/config/hypr/looknfeel.lua"
   local config_dest="$CONFIG_HOME/hypr/looknfeel.lua"
-  local shader_src="$ROOT/share/shaders/anti-flashbang.glsl"
-  local shader_dest="$DATA_HOME/dotfiles/shaders/anti-flashbang.glsl"
-  local command_src="$ROOT/bin/dotfiles-flashbang"
-  local command_dest="$HOME/.local/bin/dotfiles-flashbang"
 
   "$ROOT/check" looknfeel
   install_copied_file "$config_src" "$config_dest" "hypr-looknfeel.lua"
-  install_copied_file "$shader_src" "$shader_dest" "shader-anti-flashbang.glsl"
-  install_copied_file "$command_src" "$command_dest" "dotfiles-flashbang"
-  run chmod 0755 "$command_dest"
 
   if (( ! DRY_RUN )) && command -v hyprctl >/dev/null 2>&1; then
     hyprctl reload
     hyprctl configerrors
   fi
   ok "Installed Hyprland appearance overrides"
-  info "Toggle the anti-flashbang shader with: dotfiles-flashbang"
 }
 
 install_translation() {

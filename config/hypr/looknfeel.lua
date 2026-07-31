@@ -14,6 +14,11 @@ hl.config({
     gaps_in = 4,
     gaps_out = 8,
 
+    -- A hairline is enough to mark focus once the border color is muted; the
+    -- stock 2px reads as a hard outline at the accent's saturation. The color
+    -- itself stays with the theme.
+    border_size = 1,
+
     -- Empty space held between workspaces while they slide past each other.
     gaps_workspaces = 50,
 
@@ -109,12 +114,12 @@ hl.animation({ leaf = "workspaces", enabled = true, speed = 7, bezier = "menuDec
 hl.animation({ leaf = "specialWorkspaceIn", enabled = true, speed = 2.8, bezier = "expressiveDefaultSpatial", style = "slidevert" })
 hl.animation({ leaf = "specialWorkspaceOut", enabled = true, speed = 1.2, bezier = "emphasizedAccel", style = "slidevert" })
 
--- The anti-flashbang shader is a runtime toggle by default; run
--- `dotfiles-flashbang` to switch it on and off. Uncomment this to keep it on
--- across every Hyprland restart.
---
--- hl.config({
---   decoration = {
---     screen_shader = os.getenv("HOME") .. "/.local/share/dotfiles/shaders/anti-flashbang.glsl",
---   },
--- })
+-- Frost the bar so the theme can make it transparent and still stay readable.
+-- Omarchy already rules this namespace for animation; layer rules accumulate,
+-- so this adds blur without disturbing that. `ignore_alpha` keeps the fully
+-- transparent parts of the layer from being blurred into a visible slab.
+hl.layer_rule({
+  match = { namespace = "omarchy-bar" },
+  blur = true,
+  ignore_alpha = 0.1,
+})
