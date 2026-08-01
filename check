@@ -444,7 +444,9 @@ check_onepiece() {
 }
 
 check_plymouth() {
-  local theme="$ROOT/system/plymouth/themes/zoro"
+  local theme_name="zoro"
+  local theme="$ROOT/system/plymouth/themes/$theme_name"
+  local active_theme
   local preview="$ROOT/assets/zoro-plymouth.gif"
   local script="$theme/zoro.script"
   local descriptor="$theme/zoro.plymouth"
@@ -510,6 +512,26 @@ check_plymouth() {
     fi
   else
     warn "ImageMagick is unavailable; skipped Zoro image validation"
+  fi
+
+  # Omarchy 4 manages Plymouth itself. `omarchy plymouth set`,
+  # `omarchy plymouth set by theme`, and `omarchy refresh plymouth` each force
+  # plymouth-set-default-theme back to `omarchy`, because Omarchy's model is a
+  # single generated theme rather than a set of installed ones. Nothing runs
+  # them automatically — `omarchy update` does not touch Plymouth — but any of
+  # them silently replaces Zoro, and that only becomes visible at the next
+  # boot. Surface the drift here instead.
+  if command -v plymouth-set-default-theme >/dev/null 2>&1; then
+    active_theme="$(plymouth-set-default-theme 2>/dev/null || true)"
+    if [[ -z "$active_theme" ]]; then
+      warn "Unable to read the active Plymouth theme"
+    elif [[ "$active_theme" == "$theme_name" ]]; then
+      ok "Zoro is the active Plymouth theme"
+    else
+      warn "Active Plymouth theme is '$active_theme', not '$theme_name'; run ./install plymouth to restore it"
+    fi
+  else
+    warn "plymouth-set-default-theme is unavailable; skipped active-theme check"
   fi
 
   ok "Zoro Plymouth theme structure is valid"
