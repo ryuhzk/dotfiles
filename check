@@ -11,7 +11,7 @@ fail() { printf '\033[1;31m[fail]\033[0m %s\n' "$*" >&2; FAILURES=$((FAILURES + 
 
 usage() {
   cat <<'EOF'
-Usage: ./check [all|lazygit|yazi|translation|hypr|looknfeel|fcitx5|git-identity|onepiece|plymouth|security] [...]
+Usage: ./check [all|mise|lazygit|yazi|translation|hypr|looknfeel|fcitx5|git-identity|onepiece|plymouth|security] [...]
 EOF
 }
 
@@ -64,6 +64,59 @@ check_yazi() {
   else
     warn "yazi is not installed; run ./install packages before using this module"
   fi
+}
+
+check_mise() {
+  local config="$ROOT/config/mise/config.toml"
+  local tool
+  local required_tools=(
+    android-sdk
+    bun
+    claude
+    codex
+    gh
+    go
+    java
+    node
+    'npm:@puffinstudio/fizzyx'
+    'npm:agent-device'
+    'npm:eas-cli'
+    'npm:playwright'
+    opencode
+  )
+
+  [[ -s "$config" ]] || {
+    fail "Missing global mise configuration"
+    return
+  }
+  if validate_toml "$config"; then
+    ok "Valid TOML: config/mise/config.toml"
+  else
+    fail "Invalid global mise configuration"
+    return
+  fi
+
+  for tool in "${required_tools[@]}"; do
+    if ! python3 - "$config" "$tool" <<'PY'
+import pathlib
+import sys
+import tomllib
+
+tools = tomllib.loads(pathlib.Path(sys.argv[1]).read_text()).get("tools", {})
+raise SystemExit(0 if sys.argv[2] in tools else 1)
+PY
+    then
+      fail "Global mise configuration is missing '$tool'"
+    fi
+  done
+
+  grep -Eq '^[[:space:]]+bootstrap\) install_bootstrap ;;$' "$ROOT/install" ||
+    fail "Installer does not expose the one-command bootstrap module"
+  grep -q '^  install_linked_config mise$' "$ROOT/install" ||
+    fail "Tools installation does not deploy the global mise configuration"
+  grep -q '^    mise install$' "$ROOT/install" ||
+    fail "Tools installation does not install the declared mise tools"
+  ok "Global mise tool configuration is complete"
 }
 
 check_hypr() {
@@ -568,6 +621,7 @@ check_security() {
 run_check() {
   case "$1" in
     all)
+      check_mise
       check_lazygit
       check_yazi
       check_translation
@@ -581,6 +635,7 @@ run_check() {
       check_security
       ;;
     lazygit) check_lazygit ;;
+    mise) check_mise ;;
     yazi) check_yazi ;;
     translation) check_translation ;;
     hypr) check_hypr ;;

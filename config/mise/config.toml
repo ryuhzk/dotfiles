@@ -1,0 +1,14 @@
+[tools]
+android-sdk = "latest"
+bun = "latest"
+claude = "latest"
+codex = "latest"
+gh = "latest"
+go = "latest"
+java = "temurin-17"
+node = "26.5.0"
+"npm:@puffinstudio/fizzyx" = { version = "1.3.1", allow_low_downloads = true }
+"npm:agent-device" = { version = "0.20.3", allow_low_downloads = true }
+"npm:eas-cli" = "21.4.0"
+"npm:playwright" = "latest"
+opencode = "latest"

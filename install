@@ -20,8 +20,10 @@ Usage: ./install [--dry-run] <module> [module...]
 
 Modules:
   all        Install lazygit, yazi, translation, hypr, looknfeel, fcitx5, and onepiece
+  bootstrap  Install packages, mise-managed tools, and all user configuration
   lazygit    Link the Lazygit configuration
   yazi       Link the Yazi configuration
+  tools      Link the global mise configuration and install its declared tools
   translation Install translation commands, Neovim support, and the Omarchy panel
   hypr       Copy the Hyprland input and keybinding configuration
   looknfeel  Copy the Hyprland appearance overrides
@@ -495,6 +497,36 @@ install_packages() {
   fi
 }
 
+install_tools() {
+  command -v mise >/dev/null 2>&1 ||
+    die "mise is required; install it before the tools module"
+
+  install_linked_config mise
+  info "Installing tools declared in the global mise configuration"
+  if (( DRY_RUN )); then
+    show_command mise install
+  else
+    mise install
+  fi
+  ok "Installed mise-managed tools"
+}
+
+install_user_modules() {
+  install_linked_config lazygit
+  install_linked_config yazi
+  install_translation
+  install_hypr
+  install_looknfeel
+  install_fcitx5
+  install_onepiece
+}
+
+install_bootstrap() {
+  install_packages
+  install_tools
+  install_user_modules
+}
+
 main() {
   local modules=()
   local arg
@@ -514,16 +546,10 @@ main() {
 
   for arg in "${modules[@]}"; do
     case "$arg" in
-      all)
-        install_linked_config lazygit
-        install_linked_config yazi
-        install_translation
-        install_hypr
-        install_looknfeel
-        install_fcitx5
-        install_onepiece
-        ;;
+      all) install_user_modules ;;
+      bootstrap) install_bootstrap ;;
       lazygit|yazi) install_linked_config "$arg" ;;
+      tools) install_tools ;;
       translation) install_translation ;;
       hypr) install_hypr ;;
       looknfeel) install_looknfeel ;;

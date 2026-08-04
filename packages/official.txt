@@ -8,3 +8,8 @@ wtype
 fcitx5
 fcitx5-configtool
 fcitx5-rime
+# Explicitly installed development tools recovered from shell history.
+cloc
+cosign
+minisign
+silicon

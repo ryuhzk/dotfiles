@@ -13,6 +13,7 @@ personal additions:
 - Hyprland appearance overrides and theme-level Omarchy shell styling
 - The custom `onepiece` Omarchy theme
 - The animated `zoro` Plymouth theme
+- A reproducible global CLI toolset managed by mise
 
 <p align="center">
   <img src="assets/zoro-plymouth.gif" alt="Zoro Plymouth boot animation preview">
@@ -45,6 +46,19 @@ Inspect the repository first:
 ./install --dry-run all
 ```
 
+On a fresh Omarchy machine, install the recovered system packages, the global
+mise toolset, and all unprivileged configuration in one pass:
+
+```bash
+./install --dry-run bootstrap
+./install bootstrap
+```
+
+The bootstrap includes explicit packages recovered from the current machine's
+shell and pacman history: `cloc`, `cosign`, `minisign`, and `silicon`.
+Package-manager dependencies are not listed separately. It deliberately
+excludes Plymouth because changing the boot splash rebuilds the initramfs.
+
 Install the unprivileged modules:
 
 ```bash
@@ -60,6 +74,20 @@ Install packages required by the optional modules:
 ```bash
 ./install packages
 ```
+
+Install only the global development tools:
+
+```bash
+./install tools
+```
+
+This links `~/.config/mise` to the repository and runs `mise install`. Native
+tools such as Bun, Node.js, Go, Java, Codex, Claude, GitHub CLI, OpenCode, and
+the Android SDK use their mise backends. JavaScript CLIs previously installed
+globally with Bun or npm (`fizzyx`, `agent-device`, `eas-cli`, and Playwright)
+use mise's isolated `npm:` backend, so they no longer depend on a shared global
+package directory. The recovered package versions are pinned where known;
+existing rolling tool selections remain on `latest`.
 
 Install Zoro Plymouth explicitly:
 
