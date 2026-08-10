@@ -369,13 +369,13 @@ install_translation() {
     info "Created private translation config: $private_config"
   fi
   if (( DRY_RUN )); then
-    show_command omarchy plugin rescan
+    show_command omarchy-shell shell rescanPlugins
     show_command omarchy plugin enable local.translation
-    show_command omarchy bar plugin move local.translation --section right --index 0
+    show_command omarchy bar move local.translation --section right --index 0
   elif command -v omarchy >/dev/null 2>&1 && omarchy-shell shell ping >/dev/null 2>&1; then
-    omarchy plugin rescan
+    omarchy-shell shell rescanPlugins
     omarchy plugin enable local.translation
-    omarchy bar plugin move local.translation --section right --index 0
+    omarchy bar move local.translation --section right --index 0
   else
     warn "Omarchy Shell is unavailable; enable local.translation after the shell starts"
   fi
