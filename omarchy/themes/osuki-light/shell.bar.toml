@@ -1,0 +1,16 @@
+# A floating pill drawn by the user-owned ryu.bar clone. These custom keys are
+# ignored by the stock bar, so the theme remains usable without the clone.
+background        = "#FFFFFF"
+background-alpha  = 0.72
+text              = "#050B12"
+active            = "#FF5A4A"
+scale-with-font   = true
+size-horizontal   = 34
+size-vertical     = 34
+pill              = true
+pill-edge-margin  = 8
+pill-cross-margin = 3
+pill-padding      = 10
+pill-border       = "#E7E8EC"
+pill-border-alpha = 0.70
+pill-border-width = 1

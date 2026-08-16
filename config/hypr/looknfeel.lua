@@ -34,10 +34,10 @@ hl.config({
   },
 
   decoration = {
-    -- rounding_power 2 is a true circular corner; higher values approach a
-    -- squircle. 2.5 reads as a softened corner rather than an obvious squircle.
-    rounding = 14,
-    rounding_power = 2.5,
+    -- Match the 34px shell pills: their circular end-cap radius is 17px.
+    -- A power of 2 keeps both surfaces on the same circular curvature.
+    rounding = 17,
+    rounding_power = 2,
 
     blur = {
       enabled = true,
@@ -83,36 +83,10 @@ hl.config({
   },
 })
 
--- Easing curves. Control points with y > 1 overshoot the target and settle back.
-hl.curve("expressiveDefaultSpatial", { type = "bezier", points = { { 0.38, 1.21 }, { 0.22, 1.00 } } })
-hl.curve("emphasizedDecel", { type = "bezier", points = { { 0.05, 0.70 }, { 0.10, 1.00 } } })
-hl.curve("emphasizedAccel", { type = "bezier", points = { { 0.30, 0.00 }, { 0.80, 0.15 } } })
-hl.curve("menuDecel", { type = "bezier", points = { { 0.10, 1.00 }, { 0.00, 1.00 } } })
-hl.curve("menuAccel", { type = "bezier", points = { { 0.52, 0.03 }, { 0.72, 0.08 } } })
-
--- Holds near the start before releasing, so a layer fades out only once its
--- shrink animation has visibly begun.
-hl.curve("stall", { type = "bezier", points = { { 1.00, -0.10 }, { 0.70, 0.85 } } })
-
--- Windows.
-hl.animation({ leaf = "windowsIn", enabled = true, speed = 3, bezier = "emphasizedDecel", style = "popin 80%" })
-hl.animation({ leaf = "windowsOut", enabled = true, speed = 2, bezier = "emphasizedDecel", style = "popin 90%" })
-hl.animation({ leaf = "windowsMove", enabled = true, speed = 3, bezier = "expressiveDefaultSpatial", style = "slide" })
-hl.animation({ leaf = "fadeIn", enabled = true, speed = 3, bezier = "emphasizedDecel" })
-hl.animation({ leaf = "fadeOut", enabled = true, speed = 2, bezier = "emphasizedDecel" })
-hl.animation({ leaf = "border", enabled = true, speed = 10, bezier = "emphasizedDecel" })
-
--- Layer surfaces: the bar, launcher, notifications, and menus.
-hl.animation({ leaf = "layersIn", enabled = true, speed = 2.7, bezier = "emphasizedDecel", style = "popin 93%" })
-hl.animation({ leaf = "layersOut", enabled = true, speed = 2.4, bezier = "menuAccel", style = "popin 94%" })
-hl.animation({ leaf = "fadeLayersIn", enabled = true, speed = 0.5, bezier = "menuDecel" })
-hl.animation({ leaf = "fadeLayersOut", enabled = true, speed = 2.7, bezier = "stall" })
-
--- Workspaces. Omarchy disables this animation by default, which is what makes
--- workspace switching feel instant rather than spatial.
-hl.animation({ leaf = "workspaces", enabled = true, speed = 7, bezier = "menuDecel", style = "slide" })
-hl.animation({ leaf = "specialWorkspaceIn", enabled = true, speed = 2.8, bezier = "expressiveDefaultSpatial", style = "slidevert" })
-hl.animation({ leaf = "specialWorkspaceOut", enabled = true, speed = 1.2, bezier = "emphasizedAccel", style = "slidevert" })
+-- Keep Omarchy/Hyprland's native animation tree for windows and layers.
+-- Only opt regular workspaces back into the stock full-distance slide style;
+-- a higher speed keeps the transition visible without a lingering exit.
+hl.animation({ leaf = "workspaces", enabled = true, speed = 8.5, bezier = "default", style = "slide" })
 
 -- Frost the bar so the theme can make it transparent and still stay readable.
 -- Omarchy already rules this namespace for animation; layer rules accumulate,

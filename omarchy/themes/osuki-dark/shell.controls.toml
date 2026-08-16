@@ -1,0 +1,22 @@
+# Fill-first controls with the dark-theme focus blue from Osuki's semantic
+# palette. The focus outline remains visible for keyboard accessibility.
+normal-color        = "foreground"
+normal-fill-alpha   = 0.10
+normal-border-width = 0
+
+hover-cursor-color        = "foreground"
+hover-cursor-fill-alpha   = 0.16
+hover-cursor-border-width = 0
+
+focus-color        = "#6B87FF"
+focus-fill-alpha   = 0.16
+focus-border       = "#6B87FF"
+focus-border-width = 2
+focus-border-alpha = 1.0
+
+selected-color        = "accent"
+selected-fill-alpha   = 0.22
+selected-border-width = 0
+
+pressed-fill-alpha   = 0.26
+selection-fill-alpha = 0.35

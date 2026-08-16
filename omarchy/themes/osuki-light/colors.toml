@@ -1,0 +1,36 @@
+mode = "light"
+
+# Osuki semantic roles: coral is the decisive accent and signal blue is
+# reserved for links, focus, and secondary interaction.
+accent = "#FF5A4A"
+selection = "#DCE3FF"
+muted = "#B6BDC8"
+
+background = "#F7F3EC"
+dark_background = "#EFEDE9"
+darker_background = "#E7E8EC"
+lighter_background = "#FBF8F3"
+
+foreground = "#050B12"
+dark_foreground = "#667085"
+light_foreground = "#27313D"
+bright_foreground = "#050B12"
+
+red = "#D93025"
+yellow = "#D98A1F"
+orange = "#FF5A4A"
+green = "#1F9D6B"
+cyan = "#2A8793"
+blue = "#3E63FF"
+magenta = "#8A5CC7"
+brown = "#8A6045"
+
+bright_red = "#E64536"
+bright_yellow = "#E79A2A"
+bright_green = "#238E65"
+bright_cyan = "#237985"
+bright_blue = "#2F4FE0"
+bright_magenta = "#7650AE"
+
+selection_foreground = "#050B12"
+selection_background = "#DCE3FF"

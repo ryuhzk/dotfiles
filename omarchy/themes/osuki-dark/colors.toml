@@ -1,0 +1,36 @@
+mode = "dark"
+
+# Osuki semantic roles: coral is the decisive accent; interactive blue and
+# status colors use their contrast-adjusted dark-theme variants.
+accent = "#FF5A4A"
+selection = "#263A68"
+muted = "#344154"
+
+background = "#050B12"
+dark_background = "#0A1019"
+darker_background = "#03070C"
+lighter_background = "#131B26"
+
+foreground = "#FCFBFA"
+dark_foreground = "#B6BDC8"
+light_foreground = "#D9DDE3"
+bright_foreground = "#FFFFFF"
+
+red = "#F2554A"
+yellow = "#F0A93C"
+orange = "#FF6E61"
+green = "#34C08B"
+cyan = "#59B7C2"
+blue = "#6B87FF"
+magenta = "#BE8BE3"
+brown = "#C99572"
+
+bright_red = "#FF6A60"
+bright_yellow = "#FFC05A"
+bright_green = "#4DD39E"
+bright_cyan = "#72CDD6"
+bright_blue = "#89A0FF"
+bright_magenta = "#D6A3F2"
+
+selection_foreground = "#FCFBFA"
+selection_background = "#263A68"

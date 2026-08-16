@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "ryu.bar",
+  "name": "Ryu Bar",
+  "version": "1.0.0",
+  "author": "Ryu",
+  "description": "Omarchy bar with theme-selectable floating pill geometry",
+  "kinds": [
+    "bar"
+  ],
+  "entryPoints": {
+    "bar": "Bar.qml"
+  },
+  "omarchy": {
+    "clonedFrom": "omarchy.bar"
+  }
+}

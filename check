@@ -177,14 +177,13 @@ check_looknfeel() {
   grep -Eq '^[[:space:]]*passes[[:space:]]*=' "$config" ||
     fail "Appearance overrides do not configure blur"
   grep -Eq 'leaf = "workspaces", enabled = true' "$config" ||
-    fail "Appearance overrides do not re-enable the workspace slide animation"
-  grep -q 'gaps_workspaces' "$config" ||
-    fail "Appearance overrides do not separate sliding workspaces"
+    fail "Appearance overrides do not enable workspace animation"
 
   # Every curve referenced by an animation has to be defined in the same file;
   # Hyprland silently falls back to a default curve otherwise.
   undefined=""
   while read -r curve; do
+    [[ "$curve" == "default" ]] && continue
     grep -Fq "hl.curve(\"$curve\"" "$config" || undefined+=" $curve"
   done < <(sed -nE 's/.*bezier = "([^"]+)".*/\1/p' "$config" | sort -u)
   if [[ -n "$undefined" ]]; then

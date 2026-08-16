@@ -1,0 +1,13 @@
+# Osuki desktop density is compact. Explicit control height preserves the
+# pill proportion while the shared spacing scale tightens large panels.
+scale            = 0.90
+scale-with-font  = true
+control-height   = 32
+popup-row-height = 32
+control-gap      = 6
+control-padding-x = 12
+control-padding-y = 6
+row-gap           = 6
+panel-gap         = 12
+panel-padding     = 16
+popup-padding     = 12
