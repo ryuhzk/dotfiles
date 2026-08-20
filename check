@@ -133,14 +133,6 @@ check_hypr() {
     fail "Hyprland input configuration does not toggle Fcitx5"
   grep -q 'local left_shift_keycode = 50' "$file" ||
     fail "Hyprland input configuration does not identify left Shift"
-  grep -q 'SUPER + SHIFT + T' "$bindings" ||
-    fail "Hyprland bindings do not expose the global translation shortcut"
-  grep -q 'SUPER + ALT + T' "$bindings" ||
-    fail "Hyprland bindings do not expose the translation panel shortcut"
-  grep -q 'omarchy-shell shell toggle io.github.ryuhzk.translation' "$bindings" ||
-    fail "Hyprland translation panel shortcut does not target the Omarchy plugin"
-  grep -Fq '\"$HOME\"/.config/omarchy/plugins/io.github.ryuhzk.translation/translation.py --replace' "$bindings" ||
-    fail "Hyprland translation shortcut does not replace selected text"
   ok "Hyprland input configuration is valid"
 }
 
@@ -243,7 +235,7 @@ check_fcitx5() {
     fail "Rime Snomiao source revision is invalid"
   grep -q 'rime_deployer' "$ROOT/install" ||
     fail "Fcitx5 installation does not deploy Rime data"
-  if rg -q 'translation_processor|TRANSLATION_RIME_TRIGGER' "$rime" "$ROOT/config/translation"; then
+  if rg -q 'translation_processor|TRANSLATION_RIME_TRIGGER' "$rime"; then
     fail "Obsolete Rime translation integration is still present"
   fi
   grep -q 'systemctl --user restart' "$ROOT/install" ||

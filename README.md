@@ -8,7 +8,6 @@ personal additions:
 - Lazygit workflow customizations
 - Small Yazi overrides
 - Fcitx5 + Rime input-method preferences
-- Keybindings for the independently maintained Omarchy Translation plugin
 - Custom multilingual Chinese/Japanese/English and Japanese-only Rime schemas
 - Hyprland appearance overrides and theme-level Omarchy shell styling
 - The custom `onepiece` Omarchy theme
@@ -192,13 +191,6 @@ After copying the configuration, the installer deploys the Rime schemas and
 dictionaries. On current Omarchy systems it then restarts
 `omarchy-fcitx5.service` and verifies that the service is active. Older setups
 without that service fall back to reloading the running Fcitx5 instance.
-
-## Translation shortcuts
-
-The translation implementation now lives in a separate Omarchy plugin. This
-repository only binds `Super+Shift+T` to translate the current Wayland
-selection and `Super+Alt+T` to open the installed plugin panel. It contains no
-translation backend or Neovim integration.
 
 ## Private Git identity
 
