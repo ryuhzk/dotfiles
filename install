@@ -19,12 +19,11 @@ usage() {
 Usage: ./install [--dry-run] <module> [module...]
 
 Modules:
-  all        Install lazygit, yazi, translation, hypr, looknfeel, fcitx5, and onepiece
+  all        Install lazygit, yazi, hypr, looknfeel, fcitx5, and onepiece
   bootstrap  Install packages, mise-managed tools, and all user configuration
   lazygit    Link the Lazygit configuration
   yazi       Link the Yazi configuration
   tools      Link the global mise configuration and install its declared tools
-  translation Install translation commands, Neovim support, and the Omarchy panel
   hypr       Copy the Hyprland input and keybinding configuration
   looknfeel  Copy the Hyprland appearance overrides
   fcitx5     Copy Fcitx5/Rime preferences and the Catppuccin theme
@@ -342,46 +341,6 @@ install_looknfeel() {
   ok "Installed Hyprland appearance overrides"
 }
 
-install_translation() {
-  local command_src="$ROOT/bin/dotfiles-translate"
-  local command_dest="$HOME/.local/bin/dotfiles-translate"
-  local core_src="$ROOT/share/translation/core.lua"
-  local core_dest="$DATA_HOME/dotfiles/translation/core.lua"
-  local example_src="$ROOT/config/translation/translation.env.example"
-  local example_dest="$CONFIG_HOME/dotfiles/translation.env.example"
-  local private_config="$CONFIG_HOME/dotfiles/translation.env"
-  local nvim_plugin_src="$ROOT/share/nvim/site/plugin/dotfiles-translation.lua"
-  local nvim_plugin_dest="$DATA_HOME/nvim/site/plugin/dotfiles-translation.lua"
-  local omarchy_plugin_src="$ROOT/omarchy/plugins/local.translation"
-  local omarchy_plugin_dest="$CONFIG_HOME/omarchy/plugins/local.translation"
-
-  "$ROOT/check" translation
-  install_copied_file "$command_src" "$command_dest" "dotfiles-translate"
-  install_copied_file "$core_src" "$core_dest" "translation-core.lua"
-  install_copied_file "$example_src" "$example_dest" "translation.env.example"
-  install_copied_file "$nvim_plugin_src" "$nvim_plugin_dest" "nvim-site-plugin-dotfiles-translation.lua"
-  install_copied_directory "$omarchy_plugin_src" "$omarchy_plugin_dest" "omarchy-plugin-local.translation"
-  run chmod 0755 "$command_dest"
-
-  if [[ ! -e "$private_config" ]]; then
-    run cp -a "$example_src" "$private_config"
-    run chmod 0600 "$private_config"
-    info "Created private translation config: $private_config"
-  fi
-  if (( DRY_RUN )); then
-    show_command omarchy-shell shell rescanPlugins
-    show_command omarchy plugin enable local.translation
-    show_command omarchy bar move local.translation --section right --index 0
-  elif command -v omarchy >/dev/null 2>&1 && omarchy-shell shell ping >/dev/null 2>&1; then
-    omarchy-shell shell rescanPlugins
-    omarchy plugin enable local.translation
-    omarchy bar move local.translation --section right --index 0
-  else
-    warn "Omarchy Shell is unavailable; enable local.translation after the shell starts"
-  fi
-  ok "Installed global translation support"
-}
-
 install_onepiece() {
   local src="$ROOT/omarchy/themes/onepiece"
   local parent="$CONFIG_HOME/omarchy/themes"
@@ -514,7 +473,6 @@ install_tools() {
 install_user_modules() {
   install_linked_config lazygit
   install_linked_config yazi
-  install_translation
   install_hypr
   install_looknfeel
   install_fcitx5
@@ -550,7 +508,6 @@ main() {
       bootstrap) install_bootstrap ;;
       lazygit|yazi) install_linked_config "$arg" ;;
       tools) install_tools ;;
-      translation) install_translation ;;
       hypr) install_hypr ;;
       looknfeel) install_looknfeel ;;
       fcitx5) install_fcitx5 ;;

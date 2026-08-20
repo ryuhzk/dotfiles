@@ -11,7 +11,7 @@ fail() { printf '\033[1;31m[fail]\033[0m %s\n' "$*" >&2; FAILURES=$((FAILURES + 
 
 usage() {
   cat <<'EOF'
-Usage: ./check [all|mise|lazygit|yazi|translation|hypr|looknfeel|fcitx5|git-identity|onepiece|plymouth|security] [...]
+Usage: ./check [all|mise|lazygit|yazi|hypr|looknfeel|fcitx5|git-identity|onepiece|plymouth|security] [...]
 EOF
 }
 
@@ -137,9 +137,9 @@ check_hypr() {
     fail "Hyprland bindings do not expose the global translation shortcut"
   grep -q 'SUPER + ALT + T' "$bindings" ||
     fail "Hyprland bindings do not expose the translation panel shortcut"
-  grep -q 'omarchy-shell shell toggle local.translation' "$bindings" ||
+  grep -q 'omarchy-shell shell toggle io.github.ryuhzk.translation' "$bindings" ||
     fail "Hyprland translation panel shortcut does not target the Omarchy plugin"
-  grep -Fq '\"$HOME\"/.local/bin/dotfiles-translate --replace' "$bindings" ||
+  grep -Fq '\"$HOME\"/.config/omarchy/plugins/io.github.ryuhzk.translation/translation.py --replace' "$bindings" ||
     fail "Hyprland translation shortcut does not replace selected text"
   ok "Hyprland input configuration is valid"
 }
@@ -199,83 +199,6 @@ check_looknfeel() {
   fi
 
   ok "Hyprland appearance module is valid"
-}
-
-check_translation() {
-  local command="$ROOT/bin/dotfiles-translate"
-  local core="$ROOT/share/translation/core.lua"
-  local example="$ROOT/config/translation/translation.env.example"
-  local nvim_plugin="$ROOT/share/nvim/site/plugin/dotfiles-translation.lua"
-  local omarchy_plugin="$ROOT/omarchy/plugins/local.translation"
-
-  [[ -x "$command" ]] || fail "Global translation command is not executable"
-  [[ -s "$core" ]] || fail "Translation provider core is missing"
-  [[ -s "$example" ]] || fail "Translation configuration example is missing"
-  [[ -s "$nvim_plugin" ]] || fail "Neovim translation bridge is missing"
-  [[ -s "$omarchy_plugin/manifest.json" ]] || fail "Omarchy translation plugin manifest is missing"
-  [[ -s "$omarchy_plugin/Panel.qml" ]] || fail "Omarchy translation panel is missing"
-  [[ -s "$omarchy_plugin/EditableLanguageDropdown.qml" ]] ||
-    fail "Omarchy translation language dropdown is missing"
-  command -v lua >/dev/null 2>&1 ||
-    warn "Lua is unavailable; skipped translation syntax checks"
-  if command -v lua >/dev/null 2>&1; then
-    lua -e "assert(loadfile('$command')); assert(loadfile('$core')); assert(loadfile('$nvim_plugin'))" &&
-      ok "Translation Lua modules have valid syntax" ||
-      fail "Translation Lua modules have invalid syntax"
-  fi
-  grep -q '^TRANSLATION_LOCAL_API_KEY=$' "$example" ||
-    fail "Translation config example must not contain a local API key"
-  grep -q '^TRANSLATION_TONE=natural$' "$example" ||
-    fail "Translation config does not define a safe default tone"
-  grep -q '^TRANSLATION_CONTEXT=general$' "$example" ||
-    fail "Translation config does not define a safe default context"
-  grep -q 'vim.keymap.set("x", "<leader>tr"' "$nvim_plugin" ||
-    fail "Neovim plugin does not expose its Visual-mode shortcut"
-  grep -q '{ command, "--stdin", "--stdout" }' "$nvim_plugin" ||
-    fail "Neovim plugin does not reuse the shared translation command"
-  grep -q -- '--stdin-lines' "$command" ||
-    fail "Translation command does not support framed panel input"
-  grep -q -- '--save-settings' "$command" ||
-    fail "Translation command cannot persist shared defaults"
-  grep -q 'config.local_api_key ~= "" and "configured" or "missing"' "$command" ||
-    fail "Translation settings output does not hide the saved API key"
-  grep -q 'stdinEnabled: true' "$omarchy_plugin/Panel.qml" ||
-    fail "Omarchy translation panel does not send text over stdin"
-  grep -q 'Traditional Chinese (Taiwan)' "$omarchy_plugin/Panel.qml" ||
-    fail "Omarchy translation panel is missing its target-language presets"
-  grep -q 'translateProcess.command = \[' "$omarchy_plugin/Panel.qml" ||
-    fail "Omarchy translation panel does not build a per-request command"
-  grep -q 'root.toneValue' "$omarchy_plugin/Panel.qml" ||
-    fail "Omarchy translation panel does not pass its current tone"
-  grep -q 'root.contextValue' "$omarchy_plugin/Panel.qml" ||
-    fail "Omarchy translation panel does not pass its current context"
-  grep -q 'id: localBaseUrl' "$omarchy_plugin/Panel.qml" ||
-    fail "Omarchy translation panel cannot configure the local endpoint"
-  grep -q 'id: localModel' "$omarchy_plugin/Panel.qml" ||
-    fail "Omarchy translation panel cannot configure the local model"
-  grep -q 'id: localApiKey' "$omarchy_plugin/Panel.qml" ||
-    fail "Omarchy translation panel cannot configure the local API key"
-  grep -q 'password: true' "$omarchy_plugin/Panel.qml" ||
-    fail "Omarchy translation panel does not mask the local API key"
-  grep -Fq 'sequences: ["Ctrl+Return", "Ctrl+Enter"]' "$omarchy_plugin/Panel.qml" ||
-    fail "Omarchy translation panel is missing the Ctrl+Enter shortcut"
-  for shortcut in 'Ctrl+L' 'Ctrl+O' 'Ctrl+Shift+C' 'Escape'; do
-    grep -Fq "sequence: \"$shortcut\"" "$omarchy_plugin/Panel.qml" ||
-      fail "Omarchy translation panel is missing the $shortcut shortcut"
-  done
-  grep -q 'has_unexpected_artifact' "$core" ||
-    fail "Translation core does not reject unexpected model artifacts"
-  grep -q '"enable_thinking":false,"enable_tools":false' "$core" ||
-    fail "Translation core does not disable unrelated local-model features"
-  if command -v omarchy-plugin-validate >/dev/null 2>&1; then
-    if omarchy-plugin-validate "$omarchy_plugin"; then
-      ok "Omarchy translation plugin manifest is valid"
-    else
-      fail "Omarchy translation plugin manifest is invalid"
-    fi
-  else
-    warn "Omarchy plugin validator is unavailable; skipped manifest validation"
-  fi
 }
 
 check_fcitx5() {
@@ -623,7 +546,6 @@ run_check() {
       check_mise
       check_lazygit
       check_yazi
-      check_translation
       check_hypr
       check_looknfeel
       check_fcitx5
@@ -636,7 +558,6 @@ run_check() {
     lazygit) check_lazygit ;;
     mise) check_mise ;;
     yazi) check_yazi ;;
-    translation) check_translation ;;
     hypr) check_hypr ;;
     looknfeel) check_looknfeel ;;
     fcitx5) check_fcitx5 ;;

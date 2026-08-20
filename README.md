@@ -8,7 +8,7 @@ personal additions:
 - Lazygit workflow customizations
 - Small Yazi overrides
 - Fcitx5 + Rime input-method preferences
-- Local-LLM Omarchy panel, global shortcut, and Neovim translation
+- Keybindings for the independently maintained Omarchy Translation plugin
 - Custom multilingual Chinese/Japanese/English and Japanese-only Rime schemas
 - Hyprland appearance overrides and theme-level Omarchy shell styling
 - The custom `onepiece` Omarchy theme
@@ -65,7 +65,7 @@ Install the unprivileged modules:
 ./install all
 ```
 
-`all` installs Lazygit, Yazi, translation support, Hyprland overrides,
+`all` installs Lazygit, Yazi, Hyprland overrides,
 appearance overrides, Fcitx5, and the One Piece theme. It deliberately excludes
 Plymouth because changing the boot splash rebuilds the initramfs.
 
@@ -193,58 +193,12 @@ dictionaries. On current Omarchy systems it then restarts
 `omarchy-fcitx5.service` and verifies that the service is active. Older setups
 without that service fall back to reloading the running Fcitx5 instance.
 
-## Translation
+## Translation shortcuts
 
-Translation uses one local-LLM Lua core across the desktop and editor:
-
-- The translation icon at the left edge of the right bar section opens a
-  scrollable quick panel for manually typed or pasted text.
-- `Super+Shift+T` translates the current Wayland selection, copies the result,
-  and replaces the selected text.
-- `Super+Alt+T` opens the Omarchy translation panel.
-- Visual-mode `<leader>tr` translates and replaces the selected text in
-  Neovim without blocking the editor.
-
-The core calls a local OpenAI-compatible API. Source and target languages are
-configurable and are not hard-coded.
-
-Install the module and edit its private configuration:
-
-```bash
-./install translation
-$EDITOR ~/.config/dotfiles/translation.env
-```
-
-The private file is created with mode `0600`. Set the local endpoint, model,
-and API key there. No API credentials are stored in this repository.
-
-The panel never reads the clipboard automatically. Its **Translation options**
-section configures the source language, target language, tone, context, local
-API endpoint, model, timeout, and optional API key. These values are saved to
-the same private file and apply to the bar panel, global selection shortcut,
-and Neovim integration. The target language remains freely editable, with
-quick presets for English, Japanese, and Traditional Chinese (Taiwan).
-
-The saved API key is never returned to the panel. The UI only reports whether
-one is configured, masks newly entered values, sends them over standard input,
-and leaves the existing key unchanged when the field is empty. Leaving the
-model field empty keeps automatic discovery of the endpoint's first model.
-
-Panel values apply to the next translation immediately, even before they are
-saved as global defaults. Context presets cover general writing, social media
-on X, casual chat, professional communication, and technical writing. Tone
-presets include natural, casual, humorous, professional, and concise output.
-The local LLM uses these choices while preserving the source meaning.
-
-Panel-wide shortcuts are available regardless of which field has focus:
-`Ctrl+Enter` translates, `Ctrl+L` clears, `Ctrl+O` toggles options,
-`Ctrl+Shift+C` copies the result, and `Esc` closes the panel. `Ctrl+X` remains
-the standard text-cut shortcut.
-
-The global shortcut reads the Wayland primary selection first and falls back
-to the regular clipboard. The Neovim plugin sends its Visual selection to the
-same command over standard input and receives the translation over standard
-output, so both entry points share the same local service and private config.
+The translation implementation now lives in a separate Omarchy plugin. This
+repository only binds `Super+Shift+T` to translate the current Wayland
+selection and `Super+Alt+T` to open the installed plugin panel. It contains no
+translation backend or Neovim integration.
 
 ## Private Git identity
 
@@ -301,7 +255,6 @@ fingerprint. The script deliberately provides no secret-key export action.
 ```bash
 ./install lazygit
 ./install yazi
-./install translation
 ./install fcitx5
 ./install onepiece
 ./install plymouth
