@@ -24,6 +24,7 @@ backups/
 .local/
 
 # Tool state
+/config/mise/conf.d/00-generated.toml
 .DS_Store
 Thumbs.db
 *.swp
