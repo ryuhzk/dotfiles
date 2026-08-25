@@ -11,7 +11,7 @@ fail() { printf '\033[1;31m[fail]\033[0m %s\n' "$*" >&2; FAILURES=$((FAILURES + 
 
 usage() {
   cat <<'EOF'
-Usage: ./check [all|mise|lazygit|yazi|hypr|looknfeel|fcitx5|git-identity|onepiece|plymouth|security] [...]
+Usage: ./check [all|mise|lazygit|yazi|hypr|looknfeel|git-identity|onepiece|plymouth|security] [...]
 EOF
 }
 
@@ -193,69 +193,6 @@ check_looknfeel() {
   ok "Hyprland appearance module is valid"
 }
 
-check_fcitx5() {
-  local config="$ROOT/config/fcitx5"
-  local rime="$ROOT/share/fcitx5/rime"
-  local japanese_revision="$ROOT/sources/rime-japanese.rev"
-  local snomiao_revision="$ROOT/sources/rime-snomiao.rev"
-  local theme="$ROOT/share/fcitx5/themes/catppuccin-macchiato-maroon"
-  local file
-
-  for file in \
-    "$config/config" \
-    "$config/profile" \
-    "$config/conf/classicui.conf" \
-    "$rime/default.custom.yaml" \
-    "$rime/japanese.dict.yaml" \
-    "$rime/japanese_pinyin.schema.yaml" \
-    "$rime/japanese_tw_eng.schema.yaml" \
-    "$rime/rime_ice.custom.yaml" \
-    "$rime/sno_japanese.schema.yaml" \
-    "$rime/translate_en2jp.schema.yaml" \
-    "$rime/opencc/hiragana_katakana.json" \
-    "$rime/opencc/hiragana_katakana.txt" \
-    "$rime/opencc/jpzh.json" \
-    "$rime/opencc/zhjp.json" \
-    "$japanese_revision" \
-    "$snomiao_revision" \
-    "$theme/theme.conf"; do
-    [[ -s "$file" ]] || fail "Missing input-method file: ${file#"$ROOT/"}"
-  done
-
-  grep -q '^DefaultIM=rime$' "$config/profile" ||
-    fail "Fcitx5 profile does not select Rime by default"
-  grep -A1 '^\[Hotkey/AltTriggerKeys\]$' "$config/config" |
-    grep -q '^0=Shift_L$' ||
-    fail "Fcitx5 left Shift does not temporarily toggle the input method"
-  grep -q '^Theme=catppuccin-macchiato-maroon$' "$config/conf/classicui.conf" ||
-    fail "Fcitx5 Classic UI does not select the bundled theme"
-  grep -Eq '^[0-9a-f]{40}$' "$japanese_revision" ||
-    fail "Rime Japanese source revision is invalid"
-  grep -Eq '^[0-9a-f]{40}$' "$snomiao_revision" ||
-    fail "Rime Snomiao source revision is invalid"
-  grep -q 'rime_deployer' "$ROOT/install" ||
-    fail "Fcitx5 installation does not deploy Rime data"
-  if rg -q 'translation_processor|TRANSLATION_RIME_TRIGGER' "$rime"; then
-    fail "Obsolete Rime translation integration is still present"
-  fi
-  grep -q 'systemctl --user restart' "$ROOT/install" ||
-    fail "Fcitx5 installation does not restart the Omarchy user service"
-  grep -q 'systemctl --user is-active --quiet' "$ROOT/install" ||
-    fail "Fcitx5 installation does not verify the restarted service"
-
-  if find "$config" "$rime" \
-    \( -type d \( -name build -o -name sync -o -name '*.userdb' \) -prune \) -o \
-    -type f \
-    \( -name '*.userdb*' -o -name 'user.yaml' -o -name 'installation.yaml' -o \
-       -name 'cached_layouts' \) | grep -q .; then
-    fail "Runtime or user-specific Fcitx5/Rime data is present"
-  else
-    ok "No Fcitx5/Rime runtime data is tracked"
-  fi
-
-  ok "Fcitx5/Rime module structure is valid"
-}
-
 check_git_identity() {
   local script="$ROOT/bin/git-identity"
 
@@ -284,7 +221,6 @@ check_language_policy() {
 
   documentation_hits=$(rg -n -P '[\p{Han}]' \
     --glob '*.md' \
-    --glob '!share/fcitx5/rime/**' \
     "$ROOT" 2>/dev/null || true)
   comment_hits=$(rg -n -P '^[[:space:]]*(#|//|;).*\p{Han}' \
     --glob '!.git/**' \
@@ -540,7 +476,6 @@ run_check() {
       check_yazi
       check_hypr
       check_looknfeel
-      check_fcitx5
       check_git_identity
       check_onepiece
       check_plymouth
@@ -552,7 +487,6 @@ run_check() {
     yazi) check_yazi ;;
     hypr) check_hypr ;;
     looknfeel) check_looknfeel ;;
-    fcitx5) check_fcitx5 ;;
     git-identity) check_git_identity ;;
     onepiece) check_onepiece ;;
     plymouth) check_plymouth ;;

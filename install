@@ -5,7 +5,6 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 DATA_HOME="${XDG_DATA_HOME:-$HOME/.local/share}"
 STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
-CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
 BACKUP_ROOT="$STATE_HOME/dotfiles/backups/$(date +%Y%m%d-%H%M%S)"
 DRY_RUN=0
 
@@ -19,14 +18,13 @@ usage() {
 Usage: ./install [--dry-run] <module> [module...]
 
 Modules:
-  all        Install lazygit, yazi, hypr, looknfeel, fcitx5, and onepiece
+  all        Install lazygit, yazi, hypr, looknfeel, and onepiece
   bootstrap  Install packages, mise-managed tools, and all user configuration
   lazygit    Link the Lazygit configuration
   yazi       Link the Yazi configuration
   tools      Link the global mise configuration and install its declared tools
   hypr       Copy the Hyprland input and keybinding configuration
   looknfeel  Copy the Hyprland appearance overrides
-  fcitx5     Copy Fcitx5/Rime preferences and the Catppuccin theme
   onepiece   Copy the One Piece theme into the Omarchy user theme directory
   plymouth   Install Zoro system-wide and rebuild the initramfs
   packages   Install packages listed in packages/official.txt through Omarchy
@@ -92,221 +90,6 @@ install_copied_file() {
   backup_user_path "$dest" "$backup_name"
   run mkdir -p "$(dirname "$dest")"
   run cp -a "$src" "$dest"
-}
-
-install_copied_directory() {
-  local src="$1"
-  local dest="$2"
-  local backup_name="$3"
-
-  [[ -d "$src" && ! -L "$src" ]] || die "Missing source directory: $src"
-  if [[ -d "$dest" && ! -L "$dest" ]] && diff -qr "$src" "$dest" >/dev/null; then
-    return
-  fi
-
-  backup_user_path "$dest" "$backup_name"
-  run mkdir -p "$(dirname "$dest")"
-  run cp -a "$src" "$dest"
-}
-
-prepare_pinned_git_source() {
-  local url="$1"
-  local revision="$2"
-  local dest="$3"
-  local current_revision
-  shift 3
-
-  if [[ -d "$dest/.git" ]]; then
-    current_revision="$(git -C "$dest" rev-parse HEAD 2>/dev/null || true)"
-    [[ "$current_revision" == "$revision" ]] ||
-      die "Cached source has an unexpected revision: $dest"
-    return
-  fi
-
-  [[ ! -e "$dest" ]] || die "Source cache path already exists: $dest"
-  info "Preparing pinned source $url at ${revision:0:12}"
-  run mkdir -p "$dest"
-  run git -C "$dest" init -q
-  run git -C "$dest" remote add origin "$url"
-  run git -C "$dest" sparse-checkout init --no-cone
-  run git -C "$dest" sparse-checkout set --no-cone "$@"
-  run git -C "$dest" fetch --depth 1 --filter=blob:none origin "$revision"
-  run git -C "$dest" checkout -q --detach FETCH_HEAD
-}
-
-deploy_rime() {
-  local rime_dest="$1"
-  local rime_build="$rime_dest/build"
-  local deploy_log="$STATE_HOME/dotfiles/rime-deploy.log"
-
-  command -v rime_deployer >/dev/null 2>&1 ||
-    die "rime_deployer is required; install fcitx5-rime before this module"
-
-  info "Deploying Rime schemas and dictionaries"
-  mkdir -p "$rime_build" "$(dirname "$deploy_log")"
-  if ! rime_deployer \
-    --build "$rime_dest" /usr/share/rime-data "$rime_build" \
-    >"$deploy_log" 2>&1; then
-    tail -n 80 "$deploy_log" >&2
-    die "Rime deployment failed; see $deploy_log"
-  fi
-  ok "Deployed Rime configuration"
-}
-
-activate_fcitx5_configuration() {
-  local service="omarchy-fcitx5.service"
-
-  if command -v systemctl >/dev/null 2>&1 &&
-    systemctl --user cat "$service" >/dev/null 2>&1; then
-    info "Restarting $service"
-    systemctl --user restart "$service" ||
-      die "Failed to restart $service"
-    systemctl --user is-active --quiet "$service" ||
-      die "$service is not active after restart"
-    ok "Restarted Fcitx5 through the Omarchy user service"
-    return
-  fi
-
-  command -v fcitx5-remote >/dev/null 2>&1 ||
-    die "Fcitx5 is not managed by Omarchy and fcitx5-remote is unavailable"
-  warn "$service is unavailable; reloading the running Fcitx5 instance"
-  fcitx5-remote -r ||
-    die "Failed to reload the running Fcitx5 instance"
-  ok "Reloaded Fcitx5 configuration"
-}
-
-install_fcitx5() {
-  local src="$ROOT/config/fcitx5"
-  local dest="$CONFIG_HOME/fcitx5"
-  local rime_src="$ROOT/share/fcitx5/rime"
-  local rime_dest="$DATA_HOME/fcitx5/rime"
-  local japanese_revision_file="$ROOT/sources/rime-japanese.rev"
-  local japanese_url="https://github.com/gkovacs/rime-japanese.git"
-  local japanese_revision
-  local japanese_cache
-  local snomiao_revision_file="$ROOT/sources/rime-snomiao.rev"
-  local snomiao_url="https://github.com/snomiao/rime-snomiao.git"
-  local snomiao_revision
-  local snomiao_cache
-  local theme_name="catppuccin-macchiato-maroon"
-  local theme_src="$ROOT/share/fcitx5/themes/$theme_name"
-  local theme_dest="$DATA_HOME/fcitx5/themes/$theme_name"
-  local rime_files=(
-    default.custom.yaml
-    japanese.dict.yaml
-    japanese_pinyin.schema.yaml
-    japanese_tw_eng.schema.yaml
-    rime_ice.custom.yaml
-    sno_japanese.schema.yaml
-    translate_en2jp.schema.yaml
-  )
-  local rime_opencc_files=(
-    hiragana_katakana.json
-    hiragana_katakana.txt
-    jpzh.json
-    zhjp.json
-  )
-  local japanese_dictionary_files=(
-    japanese.jmdict.dict.yaml
-    japanese.kana.dict.yaml
-    japanese.mozc.dict.yaml
-  )
-  local snomiao_dictionary_files=(
-    japanese_chars.dict.yaml
-    japanese_pinyin.dict.yaml
-    japanese_pinyin_simp.dict.yaml
-    pinyin_simp.dict.yaml
-    translate_en2jp.dict.yaml
-    opencc/zhjp_daily.txt
-    opencc/zhjp_word.txt
-  )
-  local file
-  local name
-  local obsolete_rime_files=(
-    lua/translation.lua
-    rime.lua
-  )
-
-  "$ROOT/check" fcitx5
-  read -r japanese_revision < "$japanese_revision_file"
-  [[ "$japanese_revision" =~ ^[0-9a-f]{40}$ ]] ||
-    die "Invalid Rime Japanese source revision"
-  japanese_cache="$CACHE_HOME/dotfiles/sources/rime-japanese/$japanese_revision"
-  read -r snomiao_revision < "$snomiao_revision_file"
-  [[ "$snomiao_revision" =~ ^[0-9a-f]{40}$ ]] ||
-    die "Invalid Rime Snomiao source revision"
-  snomiao_cache="$CACHE_HOME/dotfiles/sources/rime-snomiao/$snomiao_revision"
-
-  if [[ -L "$dest" ]]; then
-    backup_user_path "$dest" "fcitx5-directory"
-  fi
-  run mkdir -p "$dest/conf"
-
-  install_copied_file "$src/config" "$dest/config" "fcitx5-config"
-  install_copied_file "$src/profile" "$dest/profile" "fcitx5-profile"
-  for file in "$src"/conf/*.conf; do
-    name="$(basename "$file")"
-    install_copied_file "$file" "$dest/conf/$name" "fcitx5-conf-$name"
-  done
-
-  for name in "${rime_files[@]}"; do
-    install_copied_file \
-      "$rime_src/$name" \
-      "$rime_dest/$name" \
-      "fcitx5-rime-$name"
-  done
-  for name in "${obsolete_rime_files[@]}"; do
-    if [[ -e "$rime_dest/$name" || -L "$rime_dest/$name" ]]; then
-      info "Removing obsolete Rime translation entry point: $name"
-      run mkdir -p "$BACKUP_ROOT/fcitx5-rime-obsolete/$(dirname "$name")"
-      run mv -- "$rime_dest/$name" "$BACKUP_ROOT/fcitx5-rime-obsolete/$name"
-    fi
-  done
-  for name in "${rime_opencc_files[@]}"; do
-    install_copied_file \
-      "$rime_src/opencc/$name" \
-      "$rime_dest/opencc/$name" \
-      "fcitx5-rime-opencc-$name"
-  done
-
-  prepare_pinned_git_source \
-    "$japanese_url" \
-    "$japanese_revision" \
-    "$japanese_cache" \
-    "${japanese_dictionary_files[@]}"
-  for name in "${japanese_dictionary_files[@]}"; do
-    if (( DRY_RUN )) && [[ ! -f "$japanese_cache/$name" ]]; then
-      show_command cp -a "$japanese_cache/$name" "$rime_dest/$name"
-    else
-      install_copied_file \
-        "$japanese_cache/$name" \
-        "$rime_dest/$name" \
-        "fcitx5-rime-$name"
-    fi
-  done
-
-  prepare_pinned_git_source \
-    "$snomiao_url" \
-    "$snomiao_revision" \
-    "$snomiao_cache" \
-    "${snomiao_dictionary_files[@]/#/Rime/}"
-  for name in "${snomiao_dictionary_files[@]}"; do
-    if (( DRY_RUN )) && [[ ! -f "$snomiao_cache/Rime/$name" ]]; then
-      show_command cp -a "$snomiao_cache/Rime/$name" "$rime_dest/$name"
-    else
-      install_copied_file \
-        "$snomiao_cache/Rime/$name" \
-        "$rime_dest/$name" \
-        "fcitx5-rime-${name//\//-}"
-    fi
-  done
-  install_copied_directory "$theme_src" "$theme_dest" "fcitx5-theme-$theme_name"
-
-  if (( ! DRY_RUN )); then
-    deploy_rime "$rime_dest"
-    activate_fcitx5_configuration
-  fi
-  ok "Installed Fcitx5/Rime preferences"
 }
 
 install_hypr() {
@@ -454,6 +237,8 @@ install_packages() {
     ((${#official[@]})) && omarchy pkg add "${official[@]}"
     ((${#aur[@]})) && omarchy pkg aur add "${aur[@]}"
   fi
+  # The list may be empty, which would otherwise leave a failing status here.
+  ok "Installed listed packages"
 }
 
 install_tools() {
@@ -475,7 +260,6 @@ install_user_modules() {
   install_linked_config yazi
   install_hypr
   install_looknfeel
-  install_fcitx5
   install_onepiece
 }
 
@@ -510,7 +294,6 @@ main() {
       tools) install_tools ;;
       hypr) install_hypr ;;
       looknfeel) install_looknfeel ;;
-      fcitx5) install_fcitx5 ;;
       onepiece) install_onepiece ;;
       plymouth) install_plymouth ;;
       packages) install_packages ;;

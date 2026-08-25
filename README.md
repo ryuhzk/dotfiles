@@ -7,8 +7,6 @@ personal additions:
 
 - Lazygit workflow customizations
 - Small Yazi overrides
-- Fcitx5 + Rime input-method preferences
-- Custom multilingual Chinese/Japanese/English and Japanese-only Rime schemas
 - Hyprland appearance overrides and theme-level Omarchy shell styling
 - The custom `onepiece` Omarchy theme
 - The animated `zoro` Plymouth theme
@@ -65,7 +63,7 @@ Install the unprivileged modules:
 ```
 
 `all` installs Lazygit, Yazi, Hyprland overrides,
-appearance overrides, Fcitx5, and the One Piece theme. It deliberately excludes
+appearance overrides, and the One Piece theme. It deliberately excludes
 Plymouth because changing the boot splash rebuilds the initramfs.
 
 Install packages required by the optional modules:
@@ -170,27 +168,10 @@ takes hex only, so its colors are duplicated from `colors.toml`;
 
 ## Input methods
 
-The Fcitx5 module keeps three Rime choices:
-
-- `Mixed ZH-JA-EN` (`japanese_tw_eng`) for the previous mixed Pinyin, Romaji,
-  and English workflow
-- `Rime Ice` (`rime_ice`) for the full upstream Chinese experience
-- `Japanese` (`sno_japanese`) for the previous focused Romaji workflow
-
-The mixed schema retains its `P` Japanese Kanji Pinyin lookup, `T` Rime Ice
-lookup, `J`-prefixed English-to-Japanese lookup, translation hints, and
-Hiragana/Katakana conversion. Left Shift switches between native and Latin
-input, matching the previous configuration.
-
-Rime Ice is provided by `rime-ice-git`. The Japanese and translation
-dictionaries are installed from pinned revisions of `gkovacs/rime-japanese`
-and `snomiao/rime-snomiao`. The repository keeps only custom schemas and small
-conversion rules, avoiding roughly 65 MB of vendored third-party data.
-
-After copying the configuration, the installer deploys the Rime schemas and
-dictionaries. On current Omarchy systems it then restarts
-`omarchy-fcitx5.service` and verifies that the service is active. Older setups
-without that service fall back to reloading the running Fcitx5 instance.
+Input-method configuration moved to the `ryuhzk.ime` Omarchy plugin, which owns
+the Fcitx5 preferences, the Rime schemas and dictionaries, and the Classic UI
+theme. This repository keeps only the Hyprland left Shift toggle in
+`config/hypr/input.lua`.
 
 ## Private Git identity
 
@@ -247,7 +228,6 @@ fingerprint. The script deliberately provides no secret-key export action.
 ```bash
 ./install lazygit
 ./install yazi
-./install fcitx5
 ./install onepiece
 ./install plymouth
 ```
@@ -264,13 +244,8 @@ Conflicting user configuration is moved to:
 - Machine-local and private data never belongs in this repository.
 - Omarchy-generated state under `~/.local/state/omarchy` is never tracked.
 - Omarchy themes are copied, not symlinked.
-- Fcitx5 files are copied individually. The Rime Ice override is deployed to
-  `~/.local/share/fcitx5/rime/default.custom.yaml`, which is Fcitx5-Rime's
-  active user-data path.
-- Rime build output, learned dictionaries, sync data, and installation IDs stay
-  machine-local and are never tracked.
 - Documentation and explanatory comments are English-only. Non-English strings
-  remain only where they are functional input-method or theme data.
+  remain only where they are functional theme data.
 - System themes require an explicit module install.
 - Media assets are not covered by the repository's MIT license; see
   [ASSETS.md](ASSETS.md).
