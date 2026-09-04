@@ -5,6 +5,8 @@ jq
 lua
 wl-clipboard
 wtype
+# xrdb sets the XWayland Xft.dpi from looknfeel.lua (HiDPI fonts in WeChat etc).
+xorg-xrdb
 # Explicitly installed development tools recovered from shell history.
 cloc
 cosign

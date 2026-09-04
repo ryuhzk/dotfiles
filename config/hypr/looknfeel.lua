@@ -88,6 +88,18 @@ hl.config({
 -- a higher speed keeps the transition visible without a lingering exit.
 hl.animation({ leaf = "workspaces", enabled = true, speed = 8.5, bezier = "default", style = "slide" })
 
+-- XWayland fonts follow an X resource, not a Wayland scale. This monitor runs
+-- at scale 2 (see monitors.lua's GDK_SCALE), which native Wayland apps honour
+-- on their own; an XWayland Qt app such as WeChat has no such channel and
+-- renders at 96 DPI, i.e. half size. Xft.dpi = 96 * 2 puts it on the same
+-- footing. Merged once per session, after Xwayland is up, because the resource
+-- lives on the X server that Hyprland starts. Keep 192 in step with the
+-- monitor's scale if that ever changes.
+o.exec_on_start(
+  "bash -c 'for i in $(seq 40); do xrdb -query >/dev/null 2>&1 && break; sleep 0.25; done; "
+    .. "printf \"Xft.dpi: 192\\n\" | xrdb -merge'"
+)
+
 -- Frost the bar so the theme can make it transparent and still stay readable.
 -- Omarchy already rules this namespace for animation; layer rules accumulate,
 -- so this adds blur without disturbing that. `ignore_alpha` keeps the fully
