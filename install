@@ -18,7 +18,7 @@ usage() {
 Usage: ./install [--dry-run] <module> [module...]
 
 Modules:
-  all        Install lazygit, yazi, hypr, looknfeel, and onepiece
+  all        Install lazygit, yazi, hypr, looknfeel, onepiece, and voxtype
   bootstrap  Install packages, mise-managed tools, and all user configuration
   lazygit    Link the Lazygit configuration
   yazi       Link the Yazi configuration
@@ -26,6 +26,7 @@ Modules:
   hypr       Copy the Hyprland input and keybinding configuration
   looknfeel  Copy the Hyprland appearance overrides
   onepiece   Copy the One Piece theme into the Omarchy user theme directory
+  voxtype    Link the voxtype dictation configuration and its correction script
   plymouth   Install Zoro system-wide and rebuild the initramfs
   packages   Install packages listed in packages/official.txt through Omarchy
 
@@ -122,6 +123,40 @@ install_looknfeel() {
     hyprctl configerrors
   fi
   ok "Installed Hyprland appearance overrides"
+}
+
+install_linked_bin() {
+  local name="$1"
+  local src="$ROOT/bin/$name"
+  local dest="$HOME/.local/bin/$name"
+
+  [[ -x "$src" ]] || die "Missing executable: $src"
+
+  if [[ -L "$dest" && $(readlink "$dest") == "$src" ]]; then
+    ok "$name is already linked"
+    return
+  fi
+
+  backup_user_path "$dest" "bin-$name"
+  run mkdir -p "$HOME/.local/bin"
+  run ln -s "$src" "$dest"
+  ok "Installed $name"
+}
+
+install_voxtype() {
+  if ! command -v voxtype >/dev/null 2>&1; then
+    warn "voxtype is not installed; skipped the voxtype module"
+    return
+  fi
+
+  "$ROOT/check" voxtype
+  install_linked_config voxtype
+  install_linked_bin voxtype-fix-zh
+
+  if (( ! DRY_RUN )) && systemctl --user is-active --quiet voxtype 2>/dev/null; then
+    systemctl --user restart voxtype
+  fi
+  ok "Installed voxtype dictation"
 }
 
 install_onepiece() {
@@ -261,6 +296,7 @@ install_user_modules() {
   install_hypr
   install_looknfeel
   install_onepiece
+  install_voxtype
 }
 
 install_bootstrap() {
@@ -295,6 +331,7 @@ main() {
       hypr) install_hypr ;;
       looknfeel) install_looknfeel ;;
       onepiece) install_onepiece ;;
+      voxtype) install_voxtype ;;
       plymouth) install_plymouth ;;
       packages) install_packages ;;
       *) die "Unknown module: $arg" ;;

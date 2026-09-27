@@ -193,6 +193,23 @@ check_looknfeel() {
   ok "Hyprland appearance module is valid"
 }
 
+check_voxtype() {
+  local config="$ROOT/config/voxtype/config.toml"
+  local script="$ROOT/bin/voxtype-fix-zh"
+
+  [[ -s "$config" ]] || {
+    fail "Missing voxtype configuration"
+    return
+  }
+  validate_toml "$config" || fail "voxtype configuration is not valid TOML"
+  grep -q 'voxtype-fix-zh' "$config" ||
+    fail "voxtype configuration does not post-process through voxtype-fix-zh"
+  [[ -x "$script" ]] || fail "voxtype-fix-zh is not executable"
+  python3 -c 'import ast, sys; ast.parse(open(sys.argv[1]).read())' "$script" ||
+    fail "voxtype-fix-zh is not valid Python"
+  ok "voxtype configuration is valid"
+}
+
 check_git_identity() {
   local script="$ROOT/bin/git-identity"
 
@@ -478,6 +495,7 @@ run_check() {
       check_looknfeel
       check_git_identity
       check_onepiece
+      check_voxtype
       check_plymouth
       check_language_policy
       check_security
@@ -489,6 +507,7 @@ run_check() {
     looknfeel) check_looknfeel ;;
     git-identity) check_git_identity ;;
     onepiece) check_onepiece ;;
+    voxtype) check_voxtype ;;
     plymouth) check_plymouth ;;
     security) check_security ;;
     *) usage; fail "Unknown check: $1" ;;

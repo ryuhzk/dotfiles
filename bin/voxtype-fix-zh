@@ -1,0 +1,96 @@
+#!/usr/bin/python3
+"""Correct homophone errors in Chinese dictation before voxtype outputs it.
+
+Reads the transcript on stdin and writes it back on stdout, with characters the
+recogniser heard wrongly (a word written with other characters that sound the
+same) replaced using the sentence's meaning. It uses the local model the
+translation plugin is set up for, and prints the transcript unchanged whenever
+the model fails, is slow, or answers with something that is not a light
+correction of it. The Chinese in SYSTEM is data for the model, not commentary.
+"""
+import difflib
+import json
+import os
+import sys
+import urllib.request
+
+CONFIG = os.path.join(os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config")),
+                      "omarchy-translation", "config.env")
+TIMEOUT_SECONDS = 4
+
+SYSTEM = (
+    "You fix speech-recognition errors in Chinese dictation. The input is what a speech "
+    "recogniser heard. It may contain words that sound the same as what the speaker said but "
+    "are the wrong characters. Use the meaning of the whole sentence to decide what the speaker "
+    "meant, and replace only characters that are clearly wrong in this context. Keep every "
+    "correct word exactly as it is. Do not rephrase, reorder, add or remove anything, do not "
+    "change punctuation, do not translate, do not answer or comment. If nothing is wrong, "
+    "return the input unchanged. Output only the corrected text. "
+    "Fix a wrong character by replacing it with the right one; never delete a character. A "
+    "common case is 在 heard where 再 (again, then) was meant: 你在测一下 -> 你再测一下. "
+    "About the speaker: a software developer who talks about code, AI assistants and their chat "
+    "sessions (会话), plugins, commits, branches, pull requests and deployments, as well as everyday life. "
+    "Examples: 我在上一个绘画里说过 -> 我在上一个会话里说过 (a chat session, not a painting); "
+    "这个接口的反回值 -> 这个接口的返回值; 我们周末去看画展 stays unchanged."
+)
+
+
+def settings():
+    values = {}
+    try:
+        with open(CONFIG, encoding="utf-8") as handle:
+            for line in handle:
+                key, _, value = line.strip().partition("=")
+                values[key] = value.strip().strip("\"'")
+    except OSError:
+        pass
+    return (
+        values.get("TRANSLATION_LOCAL_BASE_URL", "http://127.0.0.1:1234/v1").rstrip("/"),
+        values.get("TRANSLATION_LOCAL_MODEL", ""),
+        values.get("TRANSLATION_LOCAL_API_KEY", ""),
+    )
+
+
+def corrected(text):
+    base, model, key = settings()
+    body = json.dumps({
+        "model": model,
+        "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": text}],
+        "temperature": 0,
+        "max_tokens": max(64, len(text) * 3),
+        "stream": False,
+        "reasoning_effort": "none",
+        "chat_template_kwargs": {"enable_thinking": False},
+    }).encode()
+    headers = {"Content-Type": "application/json"}
+    if key:
+        headers["Authorization"] = "Bearer " + key
+    request = urllib.request.Request(base + "/chat/completions", body, headers)
+    with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
+        return json.load(response)["choices"][0]["message"]["content"].strip()
+
+
+def plausible(original, fixed):
+    """A correction swaps a few characters; anything else is the model rewriting."""
+    if not fixed or ("\n" in fixed and "\n" not in original):
+        return False
+    if not 0.85 <= len(fixed) / max(1, len(original)) <= 1.15:
+        return False
+    return difflib.SequenceMatcher(None, original, fixed).ratio() >= 0.75
+
+
+def main():
+    original = sys.stdin.read()
+    text = original.strip()
+    if not text:
+        sys.stdout.write(original)
+        return
+    try:
+        fixed = corrected(text)
+    except Exception:
+        fixed = ""
+    sys.stdout.write(fixed if plausible(text, fixed) else text)
+
+
+if __name__ == "__main__":
+    main()

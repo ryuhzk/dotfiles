@@ -11,6 +11,8 @@ personal additions:
 - The custom `onepiece` Omarchy theme
 - The animated `zoro` Plymouth theme
 - A reproducible global CLI toolset managed by mise
+- Voxtype dictation with local-model homophone correction and Chinese-to-English
+  push-to-talk
 
 <p align="center">
   <img src="assets/zoro-plymouth.gif" alt="Zoro Plymouth boot animation preview">
@@ -63,7 +65,8 @@ Install the unprivileged modules:
 ```
 
 `all` installs Lazygit, Yazi, Hyprland overrides,
-appearance overrides, and the One Piece theme. It deliberately excludes
+appearance overrides, the One Piece theme, and voxtype dictation (skipped when
+voxtype is not installed). It deliberately excludes
 Plymouth because changing the boot splash rebuilds the initramfs.
 
 Install packages required by the optional modules:
@@ -173,6 +176,38 @@ the Fcitx5 preferences, the Rime schemas and dictionaries, and the Classic UI
 theme. This repository keeps only the Hyprland left Shift toggle in
 `config/hypr/input.lua`.
 
+## Voxtype dictation
+
+The `voxtype` module links `~/.config/voxtype` to `config/voxtype` and
+`~/.local/bin/voxtype-fix-zh` to `bin/voxtype-fix-zh`, so every later change to
+the dictation setup shows up in `git diff`:
+
+```bash
+./install voxtype
+```
+
+- **F9** (Omarchy's binding) dictates Chinese with SenseVoice. Before the text
+  is output, `voxtype-fix-zh` asks the local model to replace characters the
+  recogniser heard wrongly, judged from the sentence's meaning. On any error,
+  timeout, or answer that is more than a light correction, the transcript is
+  output unchanged.
+- **F10** (in `config/hypr/bindings.lua`) is push-to-talk that outputs English:
+  the same correction, then the `ryuhzk.translation` plugin translates it.
+- Output is **pasted** with Shift+Insert rather than typed, and the clipboard is
+  restored afterwards. Typed letters go through the active input method, which
+  turns English words into pinyin candidates; a paste does not.
+
+On a new machine, beyond `./install voxtype`:
+
+1. Install voxtype with `omarchy voxtype install`, then download the SenseVoice
+   model with `omarchy voxtype model` (or `voxtype setup --download --model
+   sensevoice-small`).
+2. Install the `ryuhzk.translation` Omarchy plugin; F10 calls its backend.
+3. In LM Studio, load an instruction-following model (tested with
+   `google/gemma-4-12b-qat`, context 8192) and put its endpoint, model name, and
+   API key in `~/.config/omarchy-translation/config.env`. That file holds the
+   key and stays out of this repository; `voxtype-fix-zh` reads it too.
+
 ## Private Git identity
 
 Keep author identity and signing information out of the public repository:
@@ -229,6 +264,7 @@ fingerprint. The script deliberately provides no secret-key export action.
 ./install lazygit
 ./install yazi
 ./install onepiece
+./install voxtype
 ./install plymouth
 ```
 
