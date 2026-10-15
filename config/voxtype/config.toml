@@ -9,7 +9,7 @@
 # ("idle", "recording", "transcribing") to this file whenever it changes.
 # Required for `voxtype record toggle` and `voxtype status` commands.
 state_file = "auto"
-engine = "sensevoice"
+engine = "paraformer"
 
 [hotkey]
 # Hotkey is configured in Hyprland. Default is Super + Ctrl + X
@@ -26,10 +26,18 @@ device = "default"
 sample_rate = 16000
 
 # Maximum recording duration in seconds (safety limit)
-max_duration_secs = 60
+max_duration_secs = 120
 
 # Pause MPRIS media players during recording
 pause_media = true
+duck_media = false
+duck_media_volume_percent = 34
+duck_media_fade_ms = 150
+
+[audio.feedback]
+enabled = false
+theme = "default"
+volume = 0.699999988079071
 
 # [audio.feedback]
 # Enable audio feedback sounds (beeps when recording starts/stops)
@@ -60,6 +68,7 @@ mode = "local"
 flash_attention = false
 on_demand_loading = false
 gpu_isolation = false
+eager_processing = false
 
 # Number of CPU threads for inference (omit for auto-detection)
 # threads = 4
@@ -82,6 +91,9 @@ type_delay_ms = 1
 # terminals and GUI apps alike on Omarchy, and the clipboard is put back after.
 paste_keys = "shift+insert"
 restore_clipboard = true
+auto_submit = false
+shift_enter_newlines = false
+pre_type_delay_ms = 0
 
 # Post-processing command (optional)
 # Pipe transcribed text through an external command for cleanup before output.
@@ -109,12 +121,13 @@ on_recording_stop = false
 
 # Show notification with transcribed text after transcription completes
 on_transcription = false
+show_engine_icon = false
 
 [sensevoice]
 model = "small"
 language = "auto"
 use_itn = true
-on_demand_loading = false
+on_demand_loading = true
 
 # [text]
 # Text processing options (word replacements, spoken punctuation)
@@ -133,3 +146,46 @@ on_demand_loading = false
 [profiles.english]
 post_process_command = "$HOME/.local/bin/voxtype-fix-zh | $HOME/.config/omarchy/plugins/ryuhzk.translation/translation.py --stdin --stdout --source zh --target en --context general --tone natural"
 post_process_timeout_ms = 15000
+
+[text]
+spoken_punctuation = false
+smart_auto_submit = false
+
+[paraformer]
+model = "paraformer-zh"
+on_demand_loading = false
+
+[vad]
+enabled = false
+backend = "auto"
+threshold = 0.5
+
+[meeting]
+enabled = false
+
+[meeting.diarization]
+enabled = false
+
+[meeting.audio]
+source = "mic"
+
+[osd]
+enabled = true
+frontend = "gtk4"
+style = "default"
+layout = "compact"
+position = "bottom-center"
+width_px = 400
+height_px = 48
+margin_px = 24
+top_margin = 0.85
+opacity = 0.95
+waveform_window_secs = 3.0
+peak_decay_db_per_sec = 6.0
+waveform_gain = 10.0
+
+[status]
+icon_theme = "emoji"
+
+[parakeet]
+streaming = false
