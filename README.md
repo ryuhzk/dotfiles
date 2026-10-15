@@ -7,6 +7,7 @@ personal additions:
 
 - Lazygit workflow customizations
 - Small Yazi overrides
+- Additional LazyVim plugins for Swift and xtool iOS development
 - Hyprland appearance overrides and theme-level Omarchy shell styling
 - The custom `onepiece` Omarchy theme
 - The animated `zoro` Plymouth theme
@@ -18,7 +19,7 @@ personal additions:
   <img src="assets/zoro-plymouth.gif" alt="Zoro Plymouth boot animation preview">
 </p>
 
-It intentionally does not replace Omarchy's Neovim, tmux, terminal, Git,
+It intentionally does not replace Omarchy's base Neovim, tmux, terminal, Git,
 shell, bar, lock-screen, or generated theme state. The Hyprland files contain
 only small user-owned input and keybinding overrides.
 
@@ -64,7 +65,7 @@ Install the unprivileged modules:
 ./install all
 ```
 
-`all` installs Lazygit, Yazi, Hyprland overrides,
+`all` installs Lazygit, Yazi, additional Neovim plugins, Hyprland overrides,
 appearance overrides, the One Piece theme, and voxtype dictation (skipped when
 voxtype is not installed). It deliberately excludes
 Plymouth because changing the boot splash rebuilds the initramfs.
@@ -88,6 +89,58 @@ globally with Bun or npm (`fizzyx`, `agent-device`, `eas-cli`, and Playwright)
 use mise's isolated `npm:` backend, so they no longer depend on a shared global
 package directory. The recovered package versions are pinned where known;
 existing rolling tool selections remain on `latest`.
+
+## Swift and iOS in Neovim
+
+```bash
+./install nvim
+```
+
+This links individual Lua files from `config/nvim/lua/plugins` into the existing
+LazyVim configuration. Existing files with the same names are backed up; the
+rest of the Neovim configuration stays under Omarchy's control. Restart Neovim
+to install the added plugins. Required extras from `config/nvim/lazyvim.json` are
+merged into the local LazyVim settings, preserving existing extras and metadata.
+This loads DAP before custom plugins, as required by LazyVim's import order.
+The installer uses Python 3 for this JSON merge.
+Swift, SourceKit-LSP, and xtool must be on `PATH`,
+and `xtool sdk status` should report an installed Darwin SDK.
+
+Create and open an iOS app:
+
+```bash
+xtool new MyApp
+cd MyApp
+nvim Sources/MyApp/ContentView.swift
+```
+
+Keep the generated `.bsp/xtool.json`: SourceKit-LSP uses it to obtain iOS build
+settings from xtool. Completion, diagnostics, hover (`K`), and go-to-definition
+(`gd`) use the existing LazyVim bindings. `<Space>cf` formats with `swift format`;
+the existing global autoformat preference is respected.
+
+| Shortcut in Swift buffers | Command | Action |
+| --- | --- | --- |
+| `<Space>cxb` | `:XtoolBuild` | Build an unsigned iOS app |
+| `<Space>cxr` | `:XtoolRun` | Build, sign, and install on a connected device |
+| `<Space>cxd` | `:XtoolDevices` | List connected devices without waiting |
+
+The commands use the project containing `xtool.yml` and show output in a terminal
+split. `XtoolRun` requires xtool authentication and a trusted iOS device with
+Developer Mode enabled.
+The installed xtool version deploys the app; open it on the device afterward.
+
+The Swift toolchain's `lldb-dap` provides debugging for **local Linux Swift
+executables**: `<Space>db` toggles breakpoints and `<Space>dc` starts or continues.
+Use `<Space>da` to launch with arguments. These configurations do not set up iOS
+remote debugging. On this Arch installation the Swift debugger requires Python
+3.12; when uv's `cpython-3.12-linux-x86_64-gnu` is present, the plugin supplies
+its library path and Python home to the debugger process only.
+
+References: [Swift's Neovim guide](https://www.swift.org/documentation/articles/zero-to-swift-nvim.html)
+and [xtool documentation](https://xtool.sh/documentation/xtool/).
+
+## Plymouth installation
 
 Install Zoro Plymouth explicitly:
 

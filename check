@@ -11,7 +11,7 @@ fail() { printf '\033[1;31m[fail]\033[0m %s\n' "$*" >&2; FAILURES=$((FAILURES + 
 
 usage() {
   cat <<'EOF'
-Usage: ./check [all|mise|lazygit|yazi|hypr|looknfeel|git-identity|onepiece|plymouth|security] [...]
+Usage: ./check [all|mise|lazygit|yazi|nvim|hypr|looknfeel|git-identity|onepiece|plymouth|security] [...]
 EOF
 }
 
@@ -64,6 +64,28 @@ check_yazi() {
   else
     warn "yazi is not installed; run ./install packages before using this module"
   fi
+}
+
+check_nvim() {
+  local file
+  if python3 -m json.tool "$ROOT/config/nvim/lazyvim.json" >/dev/null; then
+    ok "Valid JSON: config/nvim/lazyvim.json"
+  else
+    fail "Invalid LazyVim extras configuration"
+  fi
+  for file in "$ROOT"/config/nvim/lua/plugins/*.lua; do
+    if [[ ! -s "$file" ]]; then
+      fail "Missing Neovim plugin: $file"
+    elif command -v luac >/dev/null 2>&1; then
+      if luac -p "$file"; then
+        ok "Valid Lua: ${file#"$ROOT/"}"
+      else
+        fail "Invalid Lua: ${file#"$ROOT/"}"
+      fi
+    else
+      warn "luac is unavailable; skipped Neovim plugin syntax check"
+    fi
+  done
 }
 
 check_mise() {
@@ -491,6 +513,7 @@ run_check() {
       check_mise
       check_lazygit
       check_yazi
+      check_nvim
       check_hypr
       check_looknfeel
       check_git_identity
@@ -503,6 +526,7 @@ run_check() {
     lazygit) check_lazygit ;;
     mise) check_mise ;;
     yazi) check_yazi ;;
+    nvim) check_nvim ;;
     hypr) check_hypr ;;
     looknfeel) check_looknfeel ;;
     git-identity) check_git_identity ;;

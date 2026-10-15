@@ -18,10 +18,11 @@ usage() {
 Usage: ./install [--dry-run] <module> [module...]
 
 Modules:
-  all        Install lazygit, yazi, hypr, looknfeel, onepiece, and voxtype
+  all        Install lazygit, yazi, nvim, hypr, looknfeel, onepiece, and voxtype
   bootstrap  Install packages, mise-managed tools, and all user configuration
   lazygit    Link the Lazygit configuration
   yazi       Link the Yazi configuration
+  nvim       Link additional LazyVim plugins without replacing the base config
   tools      Link the global mise configuration and install its declared tools
   hypr       Copy the Hyprland input and keybinding configuration
   looknfeel  Copy the Hyprland appearance overrides
@@ -91,6 +92,47 @@ install_copied_file() {
   backup_user_path "$dest" "$backup_name"
   run mkdir -p "$(dirname "$dest")"
   run cp -a "$src" "$dest"
+}
+
+install_nvim() {
+  local src dest name merged
+
+  "$ROOT/check" nvim
+  merged="$(python3 - "$ROOT/config/nvim/lazyvim.json" "$CONFIG_HOME/nvim/lazyvim.json" <<'PY'
+import json
+import pathlib
+import sys
+
+required = json.loads(pathlib.Path(sys.argv[1]).read_text())["extras"]
+target = pathlib.Path(sys.argv[2])
+config = json.loads(target.read_text()) if target.exists() else {}
+extras = config.setdefault("extras", [])
+missing = [extra for extra in required if extra not in extras]
+if missing:
+    extras.extend(missing)
+    print(json.dumps(config, indent=2))
+PY
+)"
+  if [[ -n "$merged" ]]; then
+    backup_user_path "$CONFIG_HOME/nvim/lazyvim.json" "nvim/lazyvim.json"
+    run mkdir -p "$CONFIG_HOME/nvim"
+    if (( DRY_RUN )); then
+      info "Would merge required LazyVim extras into $CONFIG_HOME/nvim/lazyvim.json"
+    else
+      printf '%s\n' "$merged" > "$CONFIG_HOME/nvim/lazyvim.json"
+    fi
+  fi
+  for src in "$ROOT"/config/nvim/lua/plugins/*.lua; do
+    name="$(basename "$src")"
+    dest="$CONFIG_HOME/nvim/lua/plugins/$name"
+    if [[ -L "$dest" && $(readlink "$dest") == "$src" ]]; then
+      continue
+    fi
+    backup_user_path "$dest" "nvim/lua/plugins/$name"
+    run mkdir -p "$(dirname "$dest")"
+    run ln -s "$src" "$dest"
+  done
+  ok "Installed Neovim plugins; restart Neovim to load them"
 }
 
 install_hypr() {
@@ -293,6 +335,7 @@ install_tools() {
 install_user_modules() {
   install_linked_config lazygit
   install_linked_config yazi
+  install_nvim
   install_hypr
   install_looknfeel
   install_onepiece
@@ -327,6 +370,7 @@ main() {
       all) install_user_modules ;;
       bootstrap) install_bootstrap ;;
       lazygit|yazi) install_linked_config "$arg" ;;
+      nvim) install_nvim ;;
       tools) install_tools ;;
       hypr) install_hypr ;;
       looknfeel) install_looknfeel ;;
